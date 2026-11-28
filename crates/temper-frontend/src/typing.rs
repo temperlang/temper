@@ -122,6 +122,10 @@ pub struct Typing {
     /// Temporaries that hold object literals' values, by their `let`s,
     /// with their uses, whose places want what the values' places do.
     literal_temporaries: HashMap<NodeId, NodeId>,
+    /// A spread's reads of its value's properties, `spread#1.a`, which
+    /// copy them ([`Settle::place_spread`]); tmpl marks those passed
+    /// as they are ([`temper_tmpl::Flags::SPREAD_COPY`]).
+    pub(crate) spread_copies: HashSet<NodeId>,
     /// The type parameter of a list literal's signature, `listT` in `<listT
     /// extends AnyValue>(listT, listT) -> List<listT>`, once one needs it.
     list_formal: Option<SymbolId>,
@@ -1268,6 +1272,7 @@ impl Settle {
                 self.check_overrides(node);
                 self.check_fun_interface(node);
                 self.check_connected_class(node);
+                self.check_data_defaults(node);
             }
             (NodeKind::If, Some(condition), _) => {
                 let mut t = self.known_type(condition);
@@ -1750,7 +1755,14 @@ impl Settle {
         if !self.is_mismatch(s, t) {
             return;
         }
-        if solves_wanted && self.check_generic_wanted(value, t) {
+        // A spread's value is a block whose result is the `new`.
+        let mut results = Vec::new();
+        self.results(value, &mut results);
+        let call = match results[..] {
+            [call] => call,
+            _ => value,
+        };
+        if solves_wanted && self.check_generic_wanted(call, t) {
             return;
         }
         // Kotlin Temper lets a nullable value be an `AnyValue`, and folds

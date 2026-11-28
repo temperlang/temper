@@ -95,7 +95,24 @@
 45:3 -> ../state/state.temper:3:27  /** @returns {number} */ <- count: Int) {}
 46:3 -> ../state/state.temper:3:27  get count() { <- count: Int) {}
 46:7 -> ../state/state.temper:3:27 (count)  count() { <- count: Int) {}
-51:1 -> ../state/state.temper:4:1  export const firstId = 1; <- export let firstId = 1;
+51:1 -> ../state/state.temper:5:1  export class Spot extends ty <- @data export class Spot(x: I
+51:14 -> ../state/state.temper:5:20 (Spot)  Spot extends type() { <- Spot(x: Int, y: Int) {}
+51:18 -> ../state/state.temper:5:1   extends type() { <- @data export class Spot(x: I
+52:3 -> ../state/state.temper:5:25  /** @type {number} */ <- x: Int, y: Int) {}
+53:3 -> ../state/state.temper:5:25  #x; <- x: Int, y: Int) {}
+54:3 -> ../state/state.temper:5:33  /** @type {number} */ <- y: Int) {}
+55:3 -> ../state/state.temper:5:33  #y; <- y: Int) {}
+65:3 -> ../state/state.temper:5:1  /** <- @data export class Spot(x: I
+69:3 -> ../state/state.temper:5:1  constructor(x, y) { <- @data export class Spot(x: I
+71:5 -> ../state/state.temper:5:25  this.#x = x; <- x: Int, y: Int) {}
+72:5 -> ../state/state.temper:5:33  this.#y = y; <- y: Int) {}
+75:3 -> ../state/state.temper:5:25  /** @returns {number} */ <- x: Int, y: Int) {}
+76:3 -> ../state/state.temper:5:25  get x() { <- x: Int, y: Int) {}
+76:7 -> ../state/state.temper:5:25 (x)  x() { <- x: Int, y: Int) {}
+80:3 -> ../state/state.temper:5:33  /** @returns {number} */ <- y: Int) {}
+81:3 -> ../state/state.temper:5:33  get y() { <- y: Int) {}
+81:7 -> ../state/state.temper:5:33 (y)  y() { <- y: Int) {}
+86:1 -> ../state/state.temper:4:1  export const firstId = 1; <- export let firstId = 1;
 # modules/parts/regex.internal.js
 # generated line:column -> source:line:column, and the text at each
 1:1 -> ../../parts/regex/regex.temper:1:1  /** @returns {number} */ <- export let wheels(): Int { 4
@@ -116,43 +133,49 @@
 11:3 -> ../machine/machine.temper:10:3  return `state ${state.id} en <- "state ${state.id.toString()
 # modules/modules.internal.js
 # generated line:column -> source:line:column, and the text at each
-7:1 -> ../modules.temper.md:33:5  /** <- export let sum(n: Int): Int
-11:1 -> ../modules.temper.md:33:5  export function sum(n) { <- export let sum(n: Int): Int
-11:17 -> ../modules.temper.md:33:16 (sum)  sum(n) { <- sum(n: Int): Int {
-11:20 -> ../modules.temper.md:33:5  (n) { <- export let sum(n: Int): Int
-12:3 -> ../modules.temper.md:34:7  return (((twice(n) + base) | <- double(n) + helperBase + bas
-15:1 -> ../modules.temper.md:25:5  class Engine extends type() <- class Engine(public name: St
-15:7 -> ../modules.temper.md:25:11 (Engine)  Engine extends type() { <- Engine(public name: String)
-15:13 -> ../modules.temper.md:25:5   extends type() { <- class Engine(public name: St
-16:3 -> ../modules.temper.md:25:25  /** @type {string} */ <- name: String) {}
-17:3 -> ../modules.temper.md:25:25  #name; <- name: String) {}
-19:3 -> ../modules.temper.md:25:5  /** @param {string} name */ <- class Engine(public name: St
-20:3 -> ../modules.temper.md:25:5  constructor(name) { <- class Engine(public name: St
-22:5 -> ../modules.temper.md:25:25  this.#name = name; <- name: String) {}
-25:3 -> ../modules.temper.md:25:25  /** @returns {string} */ <- name: String) {}
-26:3 -> ../modules.temper.md:25:25  get name() { <- name: String) {}
-26:7 -> ../modules.temper.md:25:25 (name)  name() { <- name: String) {}
-31:1 -> ../modules.temper.md:20:5  const calls2 = calls; <- let { twice as double, base,
-32:1 -> ../modules.temper.md:31:5  const base2 = 1; <- let base = 1;
-33:1 -> ../modules.temper.md:37:5  console.log(greet("modules") <- console.log(greet("modules")
-34:1 -> ../modules.temper.md:38:5  console.log(`sum ${sum(3)}`) <- console.log("sum ${sum(3).to
-35:1 -> ../modules.temper.md:39:5  console.log(`share ${share(7 <- console.log("share ${share(7
-36:1 -> ../modules.temper.md:40:5  console.log(`${new Engine("o <- console.log("${new Engine("o
-37:1 -> ../modules.temper.md:41:5  bump(); <- bump();
-38:1 -> ../modules.temper.md:42:5  bump(); <- bump();
-39:1 -> ../modules.temper.md:43:5  console.log(`calls ${calls2} <- console.log("calls ${calls.t
-40:1 -> ../modules.temper.md:54:5  console.log(`calls now ${bum <- console.log("calls now ${bum
-41:1 -> ../modules.temper.md:64:5  const half = new Ratio(1, 2) <- let half = new Ratio(1, 2);
-42:1 -> ../modules.temper.md:65:5  /** @type {boolean} */ <- console.log("${half == new R
-43:1 -> ../modules.temper.md:65:5  let t$0; <- console.log("${half == new R
-44:1 -> ../modules.temper.md:65:5  { <- console.log("${half == new R
-45:3 -> ../modules.temper.md:65:47  const left = ratioOf(3, 6); <- ratioOf(3, 6) == half} ${hal
-48:1 -> ../modules.temper.md:65:5  /** @type {boolean} */ <- console.log("${half == new R
-49:1 -> ../modules.temper.md:65:5  let t$1; <- console.log("${half == new R
-50:1 -> ../modules.temper.md:65:5  { <- console.log("${half == new R
-51:3 -> ../modules.temper.md:65:72  const left2 = half; <- half != ratioOf(1, 0)}");
-52:3 -> ../modules.temper.md:65:80  const right = ratioOf(1, 0); <- ratioOf(1, 0)}");
-55:1 -> ../modules.temper.md:65:5  console.log(`${half.eq(new R <- console.log("${half == new R
+8:1 -> ../modules.temper.md:33:5  /** <- export let sum(n: Int): Int
+12:1 -> ../modules.temper.md:33:5  export function sum(n) { <- export let sum(n: Int): Int
+12:17 -> ../modules.temper.md:33:16 (sum)  sum(n) { <- sum(n: Int): Int {
+12:20 -> ../modules.temper.md:33:5  (n) { <- export let sum(n: Int): Int
+13:3 -> ../modules.temper.md:34:7  return (((twice(n) + base) | <- double(n) + helperBase + bas
+16:1 -> ../modules.temper.md:25:5  class Engine extends type() <- class Engine(public name: St
+16:7 -> ../modules.temper.md:25:11 (Engine)  Engine extends type() { <- Engine(public name: String)
+16:13 -> ../modules.temper.md:25:5   extends type() { <- class Engine(public name: St
+17:3 -> ../modules.temper.md:25:25  /** @type {string} */ <- name: String) {}
+18:3 -> ../modules.temper.md:25:25  #name; <- name: String) {}
+20:3 -> ../modules.temper.md:25:5  /** @param {string} name */ <- class Engine(public name: St
+21:3 -> ../modules.temper.md:25:5  constructor(name) { <- class Engine(public name: St
+23:5 -> ../modules.temper.md:25:25  this.#name = name; <- name: String) {}
+26:3 -> ../modules.temper.md:25:25  /** @returns {string} */ <- name: String) {}
+27:3 -> ../modules.temper.md:25:25  get name() { <- name: String) {}
+27:7 -> ../modules.temper.md:25:25 (name)  name() { <- name: String) {}
+32:1 -> ../modules.temper.md:20:5  const calls2 = calls; <- let { twice as double, base,
+33:1 -> ../modules.temper.md:31:5  const base2 = 1; <- let base = 1;
+34:1 -> ../modules.temper.md:37:5  console.log(greet("modules") <- console.log(greet("modules")
+35:1 -> ../modules.temper.md:38:5  console.log(`sum ${sum(3)}`) <- console.log("sum ${sum(3).to
+36:1 -> ../modules.temper.md:39:5  console.log(`share ${share(7 <- console.log("share ${share(7
+37:1 -> ../modules.temper.md:40:5  console.log(`${new Engine("o <- console.log("${new Engine("o
+38:1 -> ../modules.temper.md:41:5  bump(); <- bump();
+39:1 -> ../modules.temper.md:42:5  bump(); <- bump();
+40:1 -> ../modules.temper.md:43:5  console.log(`calls ${calls2} <- console.log("calls ${calls.t
+41:1 -> ../modules.temper.md:54:5  console.log(`calls now ${bum <- console.log("calls now ${bum
+42:1 -> ../modules.temper.md:64:5  const half = new Ratio(1, 2) <- let half = new Ratio(1, 2);
+43:1 -> ../modules.temper.md:65:5  /** @type {boolean} */ <- console.log("${half == new R
+44:1 -> ../modules.temper.md:65:5  let t$0; <- console.log("${half == new R
+45:1 -> ../modules.temper.md:65:5  { <- console.log("${half == new R
+46:3 -> ../modules.temper.md:65:47  const left = ratioOf(3, 6); <- ratioOf(3, 6) == half} ${hal
+49:1 -> ../modules.temper.md:65:5  /** @type {boolean} */ <- console.log("${half == new R
+50:1 -> ../modules.temper.md:65:5  let t$1; <- console.log("${half == new R
+51:1 -> ../modules.temper.md:65:5  { <- console.log("${half == new R
+52:3 -> ../modules.temper.md:65:72  const left2 = half; <- half != ratioOf(1, 0)}");
+53:3 -> ../modules.temper.md:65:80  const right = ratioOf(1, 0); <- ratioOf(1, 0)}");
+56:1 -> ../modules.temper.md:65:5  console.log(`${half.eq(new R <- console.log("${half == new R
+57:1 -> ../modules.temper.md:75:5  /** @type {Spot} */ <- let moved = { ...new Spot(1,
+58:1 -> ../modules.temper.md:75:5  let t$2; <- let moved = { ...new Spot(1,
+59:1 -> ../modules.temper.md:75:5  { <- let moved = { ...new Spot(1,
+60:3 -> ../modules.temper.md:75:22  const spread = new Spot(1, 2 <- new Spot(1, 2), y: 5 };
+63:1 -> ../modules.temper.md:75:5  const moved = t$2; <- let moved = { ...new Spot(1,
+64:1 -> ../modules.temper.md:76:5  console.log(`spot ${moved.x} <- console.log("spot ${moved.x}
 # modules/client.internal.js
 # generated line:column -> source:line:column, and the text at each
 3:1 -> ../client/client.temper:3:1  /** <- export let sumTwice(n: Int):

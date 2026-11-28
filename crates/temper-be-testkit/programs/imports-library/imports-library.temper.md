@@ -30,6 +30,13 @@ with a nullable side too.
     );
     console.log(b.print());
 
+A spread of another library's `@data` class, which C++ builds by its
+`make`, as it does any class of another library's.
+
+    let { Spot } = import("modules/state");
+    let far = { ...new Spot(3, 4), x: 9 };
+    console.log("spot far ${far.x} ${far.y}");
+
 ```log
 hello, helpers from deep
 hello, modules from deep
@@ -39,9 +46,11 @@ own, state 1 engine 4 parts 5
 calls 0
 calls now 3
 true true true
+spot 1 5
 both 29
 ratio true true false
 renamed 6 5 3
 builtins 4 5 6 6 #4 40 41
 print 7
+spot far 9 4
 ```

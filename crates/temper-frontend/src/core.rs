@@ -17,7 +17,7 @@
 //! | `Let` | `LeftName`, type if any, initial value if any | [`LET_VAR`], [`LET_TYPE`], [`LET_INIT`] |
 //! | `Assign` | `RightName` or `obj.name` (a `.` call), value | |
 //! | `Call` | callee, arguments, with type arguments as `\typeArg T` pairs | |
-//! | `Class` | `LeftName`, type parameters, supertypes, members (each a `Let`) | supertype count, type parameter count << [`TYPE_PARAMS_SHIFT`], [`CLASS_INTERFACE`], [`CLASS_AUTO_EQ`], [`CLASS_FUN`], [`CLASS_CONNECTED`], [`CLASS_CONNECTED_LIST`], [`CLASS_SEALED`] |
+//! | `Class` | `LeftName`, type parameters, supertypes, members (each a `Let`) | supertype count, type parameter count << [`TYPE_PARAMS_SHIFT`], [`CLASS_INTERFACE`], [`CLASS_AUTO_EQ`], [`CLASS_FUN`], [`CLASS_CONNECTED`], [`CLASS_CONNECTED_LIST`], [`CLASS_SEALED`], [`CLASS_DATA`] |
 //!
 //! Plus names (`RightName` resolved to a symbol), `Value` and `Error`.
 //!
@@ -70,6 +70,11 @@ pub const CLASS_CONNECTED_LIST: u32 = 1 << 28;
 /// of its library that extend it, so `when` checks that cover them all
 /// need no `else` (notes/typing.md, "Sealed types and `when`").
 pub const CLASS_SEALED: u32 = 1 << 29;
+/// A `@data` class that keeps to `@data`'s rules: plain data, whose
+/// properties are its constructor's parameters, all public, with no
+/// other properties, no constructor of its own, and no default but null
+/// (notes/typing.md, "`@data` classes"). Spreads need one.
+pub const CLASS_DATA: u32 = 1 << 30;
 
 /// A member `Let`'s role: a field (0) or one of these.
 pub const ROLE_MASK: u32 = 7 << 8;

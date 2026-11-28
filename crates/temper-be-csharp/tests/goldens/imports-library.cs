@@ -1,6 +1,7 @@
 using Modules;
 using Modules.Core;
 using Modules.Helpers;
+using Modules.State;
 using Renamed;
 using System.Globalization;
 using TemperLang.Core;
@@ -28,5 +29,9 @@ public static class ImportsLibraryGlobal
         Builtins b = new Builtins(4);
         console.Log(string.Create(CultureInfo.InvariantCulture, $"builtins {b.Hash} {b.Get(1)} {b.Set(3)} {b.Map(5)} {b.Format()} {b.Int} {b.Later()}"));
         console.Log(b.Print());
+        Spot far;
+        Spot spread = new Spot(3, 4);
+        far = new Spot(9, spread.Y);
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"spot far {far.X} {far.Y}"));
     }
 }

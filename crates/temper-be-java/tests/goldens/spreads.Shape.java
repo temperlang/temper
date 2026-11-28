@@ -1,0 +1,4 @@
+package spreads;
+
+interface Shape {
+}

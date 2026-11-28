@@ -399,6 +399,123 @@ C3 @39: the type checked is Int32, not a class or interface
 C3 @42: an operand of identical is Int32, not a class or interface
 C3 @48: shared#4 is another module's
 
+=== spreads' copies (C4)
+tmpl 1 model 1 library spread 0.1.0
+
+module spread#0 {
+  data class P#1 {
+    let a#2: Int32;
+    let b#3: Int32?;
+    constructor constructor#4(a#5: Int32, b#6?: Int32?): P#1 {
+      let b#7: Int32? = (coalesce(b#6, (null): Int32?)): Int32?;
+      this.a#2 = a#5;
+      this.b#3 = b#7;
+    }
+  }
+
+  fn copies#8(p#9: P#1, q#10: P#1): P#1 {
+    let ok#11: P#1 = new constructor#4(copy(p#9.a#2), copy(p#9.b#3));
+    let held#12: Int32 = copy(p#9.a#2);
+    let renamed#13: P#1 = new constructor#4(copy(p#9.b#3), omitted);
+    let two#14: P#1 = new constructor#4(copy(p#9.a#2), copy(q#10.b#3));
+    let made#15: P#1 = new constructor#4(copy(new constructor#4(1, omitted).a#2), omitted);
+    let nullable#16: P#1 = new constructor#4(copy(p#9.a#2), (asNullable(copy(p#9.a#2))): Int32?);
+    let other#17: Q#18 = new constructor#20(copy(p#9.a#2));
+    return ok#11;
+  }
+
+  class Q#18 {
+    let a#19: Int32;
+    constructor constructor#20(a#21: Int32): Q#18 {
+      this.a#19 = a#21;
+    }
+  }
+
+  init {}
+}
+--- problems
+C4 @32: a spread copies b#3 for parameter a
+T3 @32: argument 1 is Int32?, but should be Int32
+C4 @39: a spread copies from p#9 and q#10, not one local
+C4 @43: a spread copies from a local, not New
+C4 @53: a spread copies a#2 for parameter b
+C4 @57: a spread copies a#2, not Q#18's
+C4 @57: a spread copies from p#9, not a Q#18
+
+=== data classes only store their parameters (C5)
+tmpl 1 model 1 library data 0.1.0
+
+module data#0 {
+  data class Ok#1 {
+    let a#2: Int32;
+    let b#3: String?;
+    constructor constructor#4(a#5: Int32, b#6?: String?): Ok#1 {
+      let b#7: String? = (coalesce(b#6, (null): String?)): String?;
+      this.a#2 = a#5;
+      this.b#3 = b#7;
+    }
+    method twice#8(): Int32 {
+      return %Int32.mul(this.a#2, 2);
+    }
+  }
+
+  data class Extra#9 {
+    let a#10: Int32;
+    let more#11: Int32;
+    constructor constructor#12(a#13: Int32): Extra#9 {
+      this.a#10 = a#13;
+      this.more#11 = 1;
+    }
+  }
+
+  data class Computed#14 {
+    let a#15: Int32;
+    constructor constructor#16(a#17: Int32): Computed#14 {
+      this.a#15 = %Int32.add(a#17, 1);
+    }
+  }
+
+  data class Swapped#18 {
+    let a#19: Int32;
+    let b#20: Int32;
+    constructor constructor#21(b#22: Int32, a#23: Int32): Swapped#18 {
+      this.a#19 = b#22;
+      this.b#20 = a#23;
+    }
+  }
+
+  data class Defaulted#24 {
+    let a#25: Int32;
+    constructor constructor#26(a#27?: Int32?): Defaulted#24 {
+      let a#28: Int32 = (coalesce(a#27, 3)): Int32;
+      this.a#25 = a#28;
+    }
+  }
+
+  data class Got#29 {
+    let a#30: Int32;
+    constructor constructor#31(a#32: Int32): Got#29 {
+      this.a#30 = a#32;
+    }
+    get doubled#33(): Int32 {
+      return %Int32.mul(this.a#30, 2);
+    }
+  }
+
+  init {}
+}
+--- problems
+C5 @24: a data class only stores its parameters, in fields of their names
+C5 @36: a data class only stores its parameters, in fields of their names
+C5 @46: a data class only stores its parameters, in fields of their names
+C5 @71: a data class only stores its parameters, in fields of their names
+
+=== reading: a copy that isn't a field read
+tmpl 1 model 1 library e 0.1.0
+module e#0 { fn f#1(n#2: Int32): Int32 { return copy(n#2); } init {} }
+--- error
+2:57: a spread's copy is a field read, as `copy(x.f)`
+
 === reading: this outside a method, without its type
 tmpl 1 model 1 library e 0.1.0
 module e#0 { class C#1 { static fn f#2(): C#1 { return this; } } init {} }

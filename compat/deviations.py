@@ -14,6 +14,8 @@ REASONS = {
     "join-spans": "spans of what rewriting a call join makes cover what it wraps",
     "brackets": "brackets that don't balance are recovered from locally",
     "missing-operator": "operands side by side with no operator keep their statement",
+    "object-spread": "an object literal may start with a spread, `{ ...old, a: 1 }`",
+    "property-colons": "each property's `:` in `{ a: b, c: d }` binds as the first's does",
 }
 
 # What our parse and grammar step outputs show for bracket recovery.
@@ -50,6 +52,14 @@ KNOWN = {
     "kotlin-token-adapter-tests.cases: stringTemplateWithEmbeddedStatementFragments": ("multi-quoted", "parse"),
     "kotlin-token-adapter-tests.cases: stringsOnStringTemplateLine": "multi-quoted",
     "multi-quoted.cases: *": "multi-quoted",
+    "edge-cases.cases: object spread": ("object-spread", "ast"),
+    "edge-cases.cases: object spread edge cases": ("object-spread", "ast"),
+    "edge-cases.cases: object properties after the first take any value, as the first does": (
+        "property-colons",
+        "ast",
+    ),
+    "kotlin-parse-tests.cases: keyValuePairs": ("property-colons", "parse"),
+    "kotlin-parse-tests.cases: multiLetCurly": ("property-colons", "parse"),
 }
 
 

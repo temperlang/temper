@@ -3,64 +3,71 @@ tmpl 1 model 1 library `imports-library` 0.0.0
 uses modules#2 0.0.0 {
   module core#3 {
     class Ratio#4 {
-      let n#24: Int32;
-      let d#25: Int32;
-      constructor constructor#26(n: Int32, d: Int32): Ratio#4;
-      operator("==") method eq#27(other: Ratio#4): Boolean;
+      let n#27: Int32;
+      let d#28: Int32;
+      constructor constructor#29(n: Int32, d: Int32): Ratio#4;
+      operator("==") method eq#30(other: Ratio#4): Boolean;
     }
-    fn ratioOf#30(n: Int32, d: Int32): Ratio#4?;
+    fn ratioOf#33(n: Int32, d: Int32): Ratio#4?;
   }
-  module ``#13 {
-    fn sum#14(n: Int32): Int32;
+  module state#12 {
+    class Spot#13 {
+      let x#52: Int32;
+      let y#53: Int32;
+      constructor constructor#54(x: Int32, y: Int32): Spot#13;
+    }
   }
-  module helpers#15 {
-    fn twice#16(x: Int32): Int32;
-    let base#17: Int32;
+  module ``#16 {
+    fn sum#17(n: Int32): Int32;
+  }
+  module helpers#18 {
+    fn twice#19(x: Int32): Int32;
+    let base#20: Int32;
   }
 }
 
 uses renamed#6 0.0.0 {
   module ``#7 {
     class Checked#8 {
-      let end#33: Int32;
-      constructor constructor#34(end: Int32): Checked#8;
-      method delete#37(): Int32;
-      get local#38(): Int32;
+      let end#36: Int32;
+      constructor constructor#37(end: Int32): Checked#8;
+      method delete#40(): Int32;
+      get local#41(): Int32;
     }
     class Builtins#10 {
-      let hash#39: Int32;
-      constructor constructor#40(hash: Int32): Builtins#10;
-      method get#41(i: Int32): Int32;
-      method set#42(i: Int32): Int32;
-      method map#43(i: Int32): Int32;
-      method format#44(): String;
-      get int#45(): Int32;
-      method later#46(): Int32;
-      method print#47(): String;
+      let hash#42: Int32;
+      constructor constructor#43(hash: Int32): Builtins#10;
+      method get#44(i: Int32): Int32;
+      method set#45(i: Int32): Int32;
+      method map#46(i: Int32): Int32;
+      method format#47(): String;
+      get int#48(): Int32;
+      method later#49(): Int32;
+      method print#50(): String;
     }
-    fn lambda#35(n: Int32): Int32;
-    let native#36: Int32;
+    fn lambda#38(n: Int32): Int32;
+    let native#39: Int32;
   }
 }
 
-uses `temper-core`#18 0.0.0-alpha.0.0 {
-  interface Console#19 {
-    connected method log#20(message: String): Void;
+uses `temper-core`#21 0.0.0-alpha.0.0 {
+  interface Console#22 {
+    connected method log#23(message: String): Void;
   }
-  class Int32#22 {
-    connected method toString#23(radix?: Int32): String;
+  class Int32#25 {
+    connected method toString#26(radix?: Int32): String;
   }
-  class Boolean#28 {
-    connected method toString#29(): String;
+  class Boolean#31 {
+    connected method toString#32(): String;
   }
-  connected fn getConsole#48(name?: String): Console#19;
+  connected fn getConsole#55(name?: String): Console#22;
 }
 
 module `imports-library`#0 {
-  let ~console#21: Console#19;
+  let ~console#24: Console#22;
 
-  export fn both#1(n#12: Int32): Int32 {
-    return %Int32.add(%Int32.add(sum#14(n#12), twice#16(n#12)), base#17);
+  export fn both#1(n#15: Int32): Int32 {
+    return %Int32.add(%Int32.add(sum#17(n#15), twice#19(n#15)), base#20);
   }
 
   let third#5: Ratio#4;
@@ -69,15 +76,19 @@ module `imports-library`#0 {
 
   let b#11: Builtins#10;
 
+  let far#14: Spot#13;
+
   init {
-    init ~console#21 = getConsole#48(omitted);
-    ~console#21.log#20(%String.cat("both ", both#1(2).toString#23(omitted)));
-    init third#5 = new constructor#26(1, 3);
-    ~console#21.log#20(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("ratio ", third#5.eq#27(new constructor#26(3, 9)).toString#29()), " "), ((value { let ~left#31: Ratio#4? = ratioOf#30(2, 6); (if (isNull(~left#31)) false else ((nonNull(~left#31)): Ratio#4).eq#27(third#5)): Boolean }): Boolean).toString#29()), " "), ((value { let ~left#32: Ratio#4? = ratioOf#30(1, 0); (if (isNull(~left#32)) false else ((nonNull(~left#32)): Ratio#4).eq#27(third#5)): Boolean }): Boolean).toString#29()));
-    init checked#9 = new constructor#34(lambda#35(native#36));
-    ~console#21.log#20(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("renamed ", checked#9.delete#37().toString#23(omitted)), " "), checked#9.local#38().toString#23(omitted)), " "), checked#9.end#33.toString#23(omitted)));
-    init b#11 = new constructor#40(4);
-    ~console#21.log#20(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("builtins ", b#11.hash#39.toString#23(omitted)), " "), b#11.get#41(1).toString#23(omitted)), " "), b#11.set#42(3).toString#23(omitted)), " "), b#11.map#43(5).toString#23(omitted)), " "), b#11.format#44()), " "), b#11.int#45().toString#23(omitted)), " "), b#11.later#46().toString#23(omitted)));
-    ~console#21.log#20(b#11.print#47());
+    init ~console#24 = getConsole#55(omitted);
+    ~console#24.log#23(%String.cat("both ", both#1(2).toString#26(omitted)));
+    init third#5 = new constructor#29(1, 3);
+    ~console#24.log#23(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("ratio ", third#5.eq#30(new constructor#29(3, 9)).toString#32()), " "), ((value { let ~left#34: Ratio#4? = ratioOf#33(2, 6); (if (isNull(~left#34)) false else ((nonNull(~left#34)): Ratio#4).eq#30(third#5)): Boolean }): Boolean).toString#32()), " "), ((value { let ~left#35: Ratio#4? = ratioOf#33(1, 0); (if (isNull(~left#35)) false else ((nonNull(~left#35)): Ratio#4).eq#30(third#5)): Boolean }): Boolean).toString#32()));
+    init checked#9 = new constructor#37(lambda#38(native#39));
+    ~console#24.log#23(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("renamed ", checked#9.delete#40().toString#26(omitted)), " "), checked#9.local#41().toString#26(omitted)), " "), checked#9.end#36.toString#26(omitted)));
+    init b#11 = new constructor#43(4);
+    ~console#24.log#23(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("builtins ", b#11.hash#42.toString#26(omitted)), " "), b#11.get#44(1).toString#26(omitted)), " "), b#11.set#45(3).toString#26(omitted)), " "), b#11.map#46(5).toString#26(omitted)), " "), b#11.format#47()), " "), b#11.int#48().toString#26(omitted)), " "), b#11.later#49().toString#26(omitted)));
+    ~console#24.log#23(b#11.print#50());
+    init far#14 = (value { let spread#51: Spot#13 = new constructor#54(3, 4); new constructor#54(9, copy(spread#51.y#53)) }): Spot#13;
+    ~console#24.log#23(%String.cat(%String.cat(%String.cat("spot far ", far#14.x#52.toString#26(omitted)), " "), far#14.y#53.toString#26(omitted)));
   }
 }

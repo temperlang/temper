@@ -615,7 +615,7 @@ let { a: T, b = 1, c: { d, e: U } } = f()
       ,
       (Eq b = 1)
       ,
-      (HighColon c : (CurlyGroup { (Comma d , (HighColon e : U)) })))
+      (LowColon c : (CurlyGroup { (Comma d , (LowColon e : U)) })))
     })
   =
   (Paren f "(" ")"))
@@ -895,7 +895,7 @@ new C<T>()
 --- tree
 (ParenGroup
   "("
-  (CurlyGroup { (Comma (LowColon a : b) , (HighColon c : d)) })
+  (CurlyGroup { (Comma (LowColon a : b) , (LowColon c : d)) })
   ")")
 
 === asiBeforeParentheses

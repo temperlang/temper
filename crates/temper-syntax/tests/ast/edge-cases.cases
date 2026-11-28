@@ -289,6 +289,209 @@ do { a: b }
 error 19..24: In {...} object syntax, any `class` property must appear first
 error 75..80: In {...} object syntax, any `class` property must appear first
 
+=== object spread
+let o = { ...p, a: 1 };
+let q = { class: C, ...p.q, b };
+let r = { ...p };
+let s = { a: 1, ...p, ...q };
+--- ast
+(Block
+  (Decl ^o \init (Call new #void \... p \a 1))
+  (Decl ^q \init (Call new C \... (Call %. p \q) \b (Call #desugarPun)))
+  (Decl ^r \init (Call new #void \... p))
+  (Decl ^s \init (Call new #void \a 1 \... p \... q))
+  #void)
+
+=== object properties after the first take any value, as the first does
+let a = { x: f() orelse -1, y: 2 };
+let b = { y: 7, x: f() orelse -1 };
+let c = { ...p, x: f() orelse -1, y: await g() orelse 0 };
+let d = { ...p, x: (f() orelse -1) };
+let e = { x, y: f() orelse -1 };
+--- ast
+(Block
+  (Decl
+    ^a
+    \init
+    (Call
+      new
+      #void
+      \x
+      (Call #desugarOperation orelse (Call f) (Call #desugarOperation - 1))
+      \y
+      2))
+  (Decl
+    ^b
+    \init
+    (Call
+      new
+      #void
+      \y
+      7
+      \x
+      (Call #desugarOperation orelse (Call f) (Call #desugarOperation - 1))))
+  (Decl
+    ^c
+    \init
+    (Call
+      new
+      #void
+      \...
+      p
+      \x
+      (Call #desugarOperation orelse (Call f) (Call #desugarOperation - 1))
+      \y
+      (Call #desugarOperation orelse (Call await (Call g)) 0)))
+  (Decl
+    ^d
+    \init
+    (Call
+      new
+      #void
+      \...
+      p
+      \x
+      (Call #desugarOperation orelse (Call f) (Call #desugarOperation - 1))))
+  (Decl
+    ^e
+    \init
+    (Call
+      new
+      #void
+      \x
+      (Call #desugarPun)
+      \y
+      (Call #desugarOperation orelse (Call f) (Call #desugarOperation - 1))))
+  #void)
+
+=== multi-declaration lets in blocks stay declarations, not properties
+let f(): Int { let x: Int, y: Int; x = 1; y = 2; x + y }
+if (c) { var a, b; a = 1 } else { let a: Int = 1, b: String; }
+while (c) { g(); let x: Int, y: Int; }
+do { var a: Int, b: Int, c: String; }
+apply { (n: Int) => let x: Int, y: Int; x }
+apply(fn (n: Int): Int { let x: Int, y: Int; n })
+class C { let x: Int, y: Int; }
+let g(): Int { @A let x: Int, y: Int; x }
+--- ast
+(Block
+  (Call
+    let
+    \word
+    ^f
+    \outType
+    Int
+    (Fun
+      (Block
+        (Decl ^x \type Int)
+        (Decl ^y \type Int)
+        (Call #desugarOperation = x 1)
+        (Call #desugarOperation = y 2)
+        (Call #desugarOperation + x y))))
+  (Call
+    if
+    c
+    (Fun
+      (Block
+        (Call @ var (Call #, (Decl ^a) (Decl ^b)))
+        (Call #desugarOperation = a 1)))
+    \callJoin:
+    \else
+    (Fun (Block (Decl ^a \type Int \init 1) (Decl ^b \type String) #void)))
+  (Call
+    while
+    c
+    (Fun (Block (Call g) (Decl ^x \type Int) (Decl ^y \type Int) #void)))
+  (Call
+    do
+    (Fun
+      (Block
+        (Call
+          @
+          var
+          (Call
+            #,
+            (Decl ^a \type Int)
+            (Decl ^b \type Int)
+            (Decl ^c \type String)))
+        #void)))
+  (Call
+    apply
+    (Fun
+      (Block \_complexArg_ n \type Int)
+      (Block (Decl ^x \type Int) (Decl ^y \type Int) x)))
+  (Call
+    apply
+    (Call
+      fn
+      (Block \_complexArg_ n \type Int)
+      \outType
+      Int
+      (Fun (Block (Decl ^x \type Int) (Decl ^y \type Int) n))))
+  (Call
+    class
+    \word
+    ^C
+    (Fun (Block (Decl ^x \type Int) (Decl ^y \type Int) #void)))
+  (Call
+    let
+    \word
+    ^g
+    \outType
+    Int
+    (Fun (Block (Call @ A (Call #, (Decl ^x \type Int) (Decl ^y \type Int))) x))))
+
+=== object spread edge cases
+let a = { ...p, };
+let c = { ... p };
+let d = { ...{ ...p, x: 1 } };
+let e = { ...f(1).g, x: h(2), y: p.q };
+let f = {
+  ...p,
+  x: 1,
+};
+apply { (n: Int): P => { ...p, x: n } };
+apply { (n: Int): P => ({ ...p, x: n }) };
+--- ast
+(Block
+  (Decl ^a \init (Call new #void \... p))
+  (Decl ^c \init (Call new #void \... p))
+  (Decl ^d \init (Call new #void \... (Call new #void \... p \x 1)))
+  (Decl
+    ^e
+    \init
+    (Call
+      new
+      #void
+      \...
+      (Call %. (Call f 1) \g)
+      \x
+      (Call h 2)
+      \y
+      (Call %. p \q)))
+  (Decl ^f \init (Call new #void \... p \x 1))
+  (Call
+    apply
+    (Fun
+      (Block \_complexArg_ n \type Int)
+      \outType
+      P
+      (Block (Block (Call #, (Call #desugarOperation ... p) (Call : x n))))))
+  (Call
+    apply
+    (Fun
+      (Block \_complexArg_ n \type Int)
+      \outType
+      P
+      (Block (Call new #void \... p \x n))))
+  #void)
+
+=== object spread with nothing to spread
+let b = { ... };
+--- ast
+(Block (Error) #void)
+error 0..15: Expected a TopLevel here
+
 === labels and jumps
 outer: for (;;) { inner: do { break outer; continue; } }
 return; return 1; throw x; yield; await p;

@@ -2626,6 +2626,649 @@ error 799..808: @fun interfaces cannot be targeted with is or as runtime type ch
 error 842..852: @fun interfaces cannot be targeted with is or as runtime type checks, because backends may make them plain function types: <[Pred]> from AnyValue
 error 897..906: @fun interfaces cannot be targeted with is or as runtime type checks, because backends may make them plain function types: <[Pred]> from AnyValue
 
+=== a spread copies the properties it doesn't give
+// `{ ...old, a: e }` is the object literal of old's class, a `@data`
+// class, with every constructor parameter given, those not written read
+// from `old`, held in a temporary that runs first; then the given values
+// run in the order written. A method (`big`) is worked out again by the
+// new object, and a nullable property is copied as it is, or given null.
+// `class: Style` may name old's class, and a method may spread `this`.
+@imu @data
+class Style(public color: String, public size: Int, public label: String? = null) {
+  public big(): Boolean { size > 20 }
+  public renamed(c: String): Style { { ...this, color: c } }
+  public toString(): String { "${color} ${size} ${label ?? "-"} ${big()}" }
+}
+let say(s: String): String { console.log(s); s }
+let make(): Style { console.log("old"); { color: "red", size: 30, label: "x" } }
+let base: Style = { color: "blue", size: 12 };
+let bigger = { ...base, size: 25 };
+console.log("${base} / ${bigger}");
+console.log("${{ ...make(), label: say("2"), color: say("1") }}");
+console.log("${{ class: Style, ...make() }}");
+let unlabeled: Style = { ...make(), label: null };
+console.log("${unlabeled} ${base.renamed("green")}");
+--- settled
+(Block
+  (Class
+    ^Style:0
+    (Param ^color:7 String)
+    (Param ^size:8 Int)
+    (Param ^label:9 (Call ? String) null)
+    (Method ^big:10 (Fn Boolean (Block (Call > size:8 20))))
+    (Method
+      ^renamed:11
+      (Fn
+        (Let ^c:13 String)
+        Style:0
+        (Block
+          (Block
+            (Let ^spread#16 this#6)
+            (Call
+              new
+              Style:0
+              c:13
+              (Call . spread#16 \size)
+              (Call . spread#16 \label))))))
+    (Method
+      ^toString:12
+      (Fn
+        String
+        (Block
+          (Call
+            cat
+            color:7
+            " "
+            size:8
+            " "
+            (Block
+              (Let ^subject#14 label:9)
+              (If (Call == subject#14 #null) "-" subject#14))
+            " "
+            (Call big:10))))))
+  (Let
+    ^say:1
+    (Fn
+      (Let ^s:15 String)
+      String
+      (Block (Call (Call . console \log) s:15) s:15)))
+  (Let
+    ^make:2
+    (Fn
+      Style:0
+      (Block (Call (Call . console \log) "old") (Call new Style:0 "red" 30 "x"))))
+  (Let ^base:3 Style:0 (Call new Style:0 "blue" 12))
+  (Let
+    ^bigger:4
+    (Block
+      (Let ^spread#17 base:3)
+      (Call new Style:0 (Call . spread#17 \color) 25 (Call . spread#17 \label))))
+  (Call (Call . console \log) (Call cat base:3 " / " bigger:4))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Block
+        (Let ^spread#18 (Call make:2))
+        (Let ^arg#19 (Call . spread#18 \size))
+        (Let ^arg#20 (Call say:1 "2"))
+        (Let ^arg#21 (Call say:1 "1"))
+        (Call new Style:0 arg#21 arg#19 arg#20))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Block
+        (Let ^spread#22 (Call make:2))
+        (Call
+          new
+          Style:0
+          (Call . spread#22 \color)
+          (Call . spread#22 \size)
+          (Call . spread#22 \label)))))
+  (Let
+    ^unlabeled:5
+    Style:0
+    (Block
+      (Let ^spread#23 (Call make:2))
+      (Call new Style:0 (Call . spread#23 \color) (Call . spread#23 \size) null)))
+  (Call
+    (Call . console \log)
+    (Call cat unlabeled:5 " " (Call (Call . base:3 \renamed) "green")))
+  #void)
+log blue 12 - false / blue 25 - true
+log old
+log 2
+log 1
+log 1 30 2 true
+log old
+log red 30 x true
+log old
+log red 30 - true green 12 - false
+
+=== spreads report what they can't copy
+// Only one spread, written first; of a `@data` class, not an interface,
+// a nullable value, or a class without `@data`. It builds old's class,
+// which `class:` may only name: the type wanted doesn't change it, so
+// `h` is a `Sq`, which isn't an `Other`.
+interface Shape { public get area(): Int; }
+class Square(public side: Int) extends Shape {
+  public get area(): Int { side * side }
+}
+@data class Sq(public side: Int) {}
+@data class Other(public side: Int) {}
+let shape: Shape = new Square(2);
+let maybe: Sq? = new Sq(3);
+let sq = new Sq(4);
+let a = { ...sq, ...sq };
+let b = { side: 1, ...sq };
+let c = { ...shape };
+let d = { ...maybe };
+let e = { class: Other, ...sq };
+let f = { ...new Square(1), side: 2 };
+let g = { ...sq, nope: 1 };
+let h: Other = { ...sq };
+--- settled
+(Block
+  (Interface ^Shape:0 (Get ^area:16 (Signature Int)))
+  (Class
+    ^Square:1
+    Shape:0
+    (Param ^side:18 Int)
+    (Get ^area:19 (Fn Int (Block (Call * side:18 side:18)))))
+  (Class ^Sq:2 (Param ^side:21 Int))
+  (Class ^Other:3 (Param ^side:23 Int))
+  (Let ^shape:4 Shape:0 (Call new Square:1 2))
+  (Let ^maybe:5 (Call ? Sq:2) (Call new Sq:2 3))
+  (Let ^sq:6 (Call new Sq:2 4))
+  (Let ^a:7 (Error))
+  (Let ^b:8 (Error))
+  (Let ^c:9 (Error))
+  (Let ^d:10 (Error))
+  (Let ^e:11 (Error))
+  (Let ^f:12 (Error))
+  (Let ^g:13 (Error))
+  (Let
+    ^h:14
+    Other:3
+    (Block (Let ^spread#24 sq:6) (Call new Sq:2 (Call . spread#24 \side))))
+  #void)
+error 557..573: Only one spread, written first, is supported in an object literal for now
+error 583..601: Only one spread, written first, is supported in an object literal for now
+error 611..623: A spread needs a value of a class type, not Shape
+error 633..645: A spread needs a value of a class type, not Sq?
+error 655..678: A spread of Sq builds Sq, so class: may name only Sq, not Other
+error 688..717: Spreads need a @data class; Square isn't one
+error 727..745: No signature matches
+error 762..771: Cannot assign to Other from Sq
+Failed: Only one spread, written first, is supported in an object literal for now
+
+=== @data classes keep to their rules
+// `@data` promises a class is plain data: each constructor parameter a
+// public property, no other property (field, getter, or setter, static
+// fields too), no constructor of its own, no default but null where a
+// property can hold null (below), no `var` if it's also `@imu`, and not
+// `@connected`. Methods, static methods, supertypes, and `var`s are
+// fine. Each rule broken is an error, and a class that breaks one but
+// the default rule isn't `@data` to a spread.
+interface Named { public name(): String; }
+@data class Fine(public n: Int, public var m: Int, public note: String? = null) extends Named {
+  public name(): String { "fine ${n} ${m} ${note ?? "-"}" }
+  public static make(): Fine { { n: 1, m: 2 } }
+}
+@data interface Face {}
+@data class Input(@noProperty n: Int, public m: Int) {}
+@data class Field(public n: Int) { public twice: Int = n * 2; }
+@data class Static(public n: Int) { public static zero: Int = 0; }
+@data class Getter(public n: Int) { public get twice(): Int { n * 2 } }
+@data class Setter(public var n: Int) { public set twice(x: Int) { n = x / 2; } }
+@data class Made { public n: Int; public constructor(n: Int) { this.n = n; } }
+@data class Hidden(private n: Int, protected m: Int) {}
+@data class Defaulted(public var n: Int? = 1) {}
+@imu @data class Frozen(public var n: Int) {}
+@connected @data class Hosted(public n: Int) {}
+let fine = { ...Fine.make(), m: 5 };
+let field = { ...new Field(1) };
+--- settled
+(Block
+  (Interface ^Named:0 (Method ^name:16 (Signature String)))
+  (Class
+    ^Fine:1
+    Named:0
+    (Param ^n:18 Int)
+    (Param var ^m:19 Int)
+    (Param ^note:20 (Call ? String) null)
+    (Method
+      ^name:21
+      (Fn
+        String
+        (Block
+          (Call
+            cat
+            "fine "
+            n:18
+            " "
+            m:19
+            " "
+            (Block
+              (Let ^subject#23 note:20)
+              (If (Call == subject#23 #null) "-" subject#23))))))
+    (Method static ^make:22 (Fn Fine:1 (Block (Call new Fine:1 1 2)))))
+  (Interface ^Face:2)
+  (Class ^Input:3 (Param private ^n:26 Int) (Param ^m:27 Int))
+  (Class ^Field:4 (Param ^n:29 Int) (Let ^twice:30 Int (Call * n:29 2)))
+  (Class ^Static:5 (Param ^n:32 Int) (Let static ^zero:33 Int 0))
+  (Class
+    ^Getter:6
+    (Param ^n:35 Int)
+    (Get ^twice:36 (Fn Int (Block (Call * n:35 2)))))
+  (Class
+    ^Setter:7
+    (Param var ^n:38 Int)
+    (Set
+      ^twice:39
+      (Fn (Let ^x:40 Int) (Block (Assign n:38 (Call / x:40 2)) #void))))
+  (Class
+    ^Made:8
+    (Let ^n:42 Int)
+    (Constructor
+      ^constructor:43
+      (Fn (Let ^n:44 Int) (Block (Assign (Call . this#41 \n) n:44) #void))))
+  (Class ^Hidden:9 (Param private ^n:46 Int) (Param ^m:47 Int))
+  (Class ^Defaulted:10 (Param var ^n:49 (Call ? Int) 1))
+  (Class ^Frozen:11 (Param var ^n:51 Int))
+  (Class ^Hosted:12 (Param ^n:53 Int))
+  (Let
+    ^fine:13
+    (Block
+      (Let ^spread#54 (Call (Call . Fine:1 \make)))
+      (Call new Fine:1 (Call . spread#54 \n) 5 (Call . spread#54 \note))))
+  (Let ^field:14 (Error))
+  #void)
+error 740..744: @data applies only to classes, not interface Face
+error 778..779: @data class Input's constructor parameter n must be a property
+error 846..856: @data class Field may declare only its constructor's properties and methods, not property twice
+error 918..927: @data class Static may declare only its constructor's properties and methods, not static zero
+error 982..987: @data class Getter may declare only its constructor's properties and methods, not getter twice
+error 1058..1063: @data class Setter may declare only its constructor's properties and methods, not setter twice
+error 1115..1116: @data class Made may declare only its constructor's properties and methods, not property n
+error 1130..1141: @data class Made may declare only its constructor's properties and methods, not a constructor
+error 1195..1196: @data class Hidden's property n must be public
+error 1213..1214: @data class Hidden's property m must be public
+error 1308..1309: @data class Frozen's property n can't be a var, as the class is @imu
+error 1342..1348: @data class Hosted can't be @connected
+error 1416..1435: Spreads need a @data class; Field isn't one
+error 1257..1258: @data class Defaulted's property n can hold null, so any default must be null: rebuilding a Defaulted from its properties would turn its null into the default
+Failed: Spreads need a @data class; Field isn't one
+
+=== a @data property that can hold null has no default but null
+// A `@data` object round-trips: made again from its own properties, it
+// has the same values. Passing null gives a parameter's default, so for
+// a property that can hold null, any default must be null: a nullable `var`
+// (`Reset`, which may be set to null) or a `var` of a type parameter
+// (`Twin`), or a property whose default may give null (`Maybe`, and
+// `Pair`, as `T` may be bound to a nullable type). Each is an error, at
+// the property.
+@data class Reset(public var n: Int? = 5) {}
+@data class Maybe(public n: Int? = Maybe.pick()) {
+  public static pick(): Int? { null }
+}
+@data class Pair<T>(public a: T, public b: T = a) {}
+@data class Twin<T>(public var a: T? = null, public var b: T? = a) {}
+--- settled
+(Block
+  (Class ^Reset:0 (Param var ^n:5 (Call ? Int) 5))
+  (Class
+    ^Maybe:1
+    (Param ^n:7 (Call ? Int) (Call (Call . Maybe:1 \pick)))
+    (Method static ^pick:8 (Fn (Call ? Int) (Block null))))
+  (Class ^Pair:2 (TypeParam ^T:9) (Param ^a:11 T:9) (Param ^b:12 T:9 a:11))
+  (Class
+    ^Twin:3
+    (TypeParam ^T:13)
+    (Param var ^a:15 (Call ? T:13) null)
+    (Param var ^b:16 (Call ? T:13) a:15)))
+error 480..481: @data class Reset's property n can hold null, so any default must be null: rebuilding a Reset from its properties would turn its null into the default
+error 521..522: @data class Maybe's property n can hold null, so any default must be null: rebuilding a Maybe from its properties would turn its null into the default
+error 627..628: @data class Pair's property b can hold null, so any default must be null: rebuilding a Pair from its properties would turn its null into the default
+error 696..697: @data class Twin's property b can hold null, so any default must be null: rebuilding a Twin from its properties would turn its null into the default
+
+=== @data defaults that can't give null are fine
+// A property that can't hold null may default to anything: one that
+// isn't nullable (a `var` too, and one typed by its default), or one
+// that's nullable but not a `var`, with a default that can't give null.
+// A spread copies each as it is, not made again, as writing every
+// property out from `old` does.
+@data class Dial(
+  public var level: Int = 5,
+  public var count = 0,
+  public note: String? = "n",
+  public twice: Int = level * 2,
+  public var tag: String? = null,
+) {}
+let dial = new Dial(1, null);
+dial.level = 4;
+dial.count = 2;
+let turned = { ...dial };
+let named = { ...turned, level: 3, note: "m" };
+console.log("${turned.level} ${turned.count} ${turned.note ?? "-"} ${turned.twice}");
+console.log("${named.level} ${named.note ?? "-"} ${named.twice} ${named.tag ?? "-"}");
+--- settled
+(Block
+  (Class
+    ^Dial:0
+    (Param var ^level:5 Int 5)
+    (Param var ^count:6 0)
+    (Param ^note:7 (Call ? String) "n")
+    (Param ^twice:8 Int (Call * level:5 2))
+    (Param var ^tag:9 (Call ? String) null))
+  (Let ^dial:1 (Call new Dial:0 1 null))
+  (Assign (Call . dial:1 \level) 4)
+  (Assign (Call . dial:1 \count) 2)
+  (Let
+    ^turned:2
+    (Block
+      (Let ^spread#13 dial:1)
+      (Call
+        new
+        Dial:0
+        (Call . spread#13 \level)
+        (Call . spread#13 \count)
+        (Call . spread#13 \note)
+        (Call . spread#13 \twice)
+        (Call . spread#13 \tag))))
+  (Let
+    ^named:3
+    (Block
+      (Let ^spread#14 turned:2)
+      (Call
+        new
+        Dial:0
+        3
+        (Call . spread#14 \count)
+        "m"
+        (Call . spread#14 \twice)
+        (Call . spread#14 \tag))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . turned:2 \level)
+      " "
+      (Call . turned:2 \count)
+      " "
+      (Block
+        (Let ^subject#10 (Call . turned:2 \note))
+        (If (Call == subject#10 #null) "-" subject#10))
+      " "
+      (Call . turned:2 \twice)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . named:3 \level)
+      " "
+      (Block
+        (Let ^subject#11 (Call . named:3 \note))
+        (If (Call == subject#11 #null) "-" subject#11))
+      " "
+      (Call . named:3 \twice)
+      " "
+      (Block
+        (Let ^subject#12 (Call . named:3 \tag))
+        (If (Call == subject#12 #null) "-" subject#12))))
+  #void)
+log 4 2 n 2
+log 3 m 2 -
+
+=== @data properties are public by default
+// A `@data` class's constructor parameters without a visibility are
+// public properties, as interface members need none; an explicit
+// `public` is fine too. They read and spread from outside the class.
+@data class Point(x: Int, y: Int) {
+  public sum(): Int { x + y }
+}
+@imu @data class Tag(public name: String, count: Int, note: String? = null) {}
+let p = new Point(1, 2);
+let q = { ...p, y: 5 };
+let t: Tag = { name: "a", count: 3 };
+let u = { ...t, note: "n" };
+console.log("${p.x} ${q.y} ${q.sum()} ${t.name} ${u.count} ${u.note ?? "-"}");
+--- settled
+(Block
+  (Class
+    ^Point:0
+    (Param ^x:7 Int)
+    (Param ^y:8 Int)
+    (Method ^sum:9 (Fn Int (Block (Call + x:7 y:8)))))
+  (Class
+    ^Tag:1
+    (Param ^name:11 String)
+    (Param ^count:12 Int)
+    (Param ^note:13 (Call ? String) null))
+  (Let ^p:2 (Call new Point:0 1 2))
+  (Let
+    ^q:3
+    (Block (Let ^spread#15 p:2) (Call new Point:0 (Call . spread#15 \x) 5)))
+  (Let ^t:4 Tag:1 (Call new Tag:1 "a" 3))
+  (Let
+    ^u:5
+    (Block
+      (Let ^spread#16 t:4)
+      (Call new Tag:1 (Call . spread#16 \name) (Call . spread#16 \count) "n")))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . p:2 \x)
+      " "
+      (Call . q:3 \y)
+      " "
+      (Call (Call . q:3 \sum))
+      " "
+      (Call . t:4 \name)
+      " "
+      (Call . u:5 \count)
+      " "
+      (Block
+        (Let ^subject#14 (Call . u:5 \note))
+        (If (Call == subject#14 #null) "-" subject#14))))
+  #void)
+log 1 5 6 a 3 n
+
+=== @data methods and hidden properties still need their visibility
+// Only a `@data` class's constructor parameters default to public: its
+// methods need a visibility, as every class's do, and a `private` or
+// `protected` property is still an error.
+@data class Loose(n: Int, private m: Int) {
+  twice(): Int { n * 2 }
+}
+--- settled
+(Block
+  (Class
+    ^Loose:0
+    (Param ^n:2 Int)
+    (Param private ^m:3 Int)
+    (Method ^twice:4 (Fn Int (Block (Call * n:2 2))))))
+error 231..253: Members of class Loose require explicit visibility: [.twice(...)]
+error 219..220: @data class Loose's property m must be public
+
+=== a spread of a value whose type is unknown reports only why
+// An undeclared name is reported once, without a second error for the
+// spread. A value that may fail spreads what it gives in the end.
+@data class P(public x: Int) {}
+let f(): P throws Bubble { bubble() }
+let p = new P(1);
+let a = { ...nope, x: 1 };
+let b = { ...(f() orelse p) };
+console.log(b.x.toString());
+--- settled
+(Block
+  (Class ^P:0 (Param ^x:6 Int))
+  (Let ^f:1 (Fn (Call throws P:0 Bubble) (Block (Fail))))
+  (Let ^p:2 (Call new P:0 1))
+  (Let ^a:3 (Error))
+  (Let
+    ^b:4
+    (Block
+      (Let ^spread#7 (Orelse (Call f:1) p:2))
+      (Call new P:0 (Call . spread#7 \x))))
+  (Call (Call . console \log) (Call (Call . (Call . b:4 \x) \toString)))
+  #void)
+error 239..243: nope has not been declared
+Failed: nope has not been declared
+
+=== @data applies only to classes
+// `@data` on a function or a `let` is an error, as on an interface.
+@data let f(): Int { 1 }
+@data let v = 1;
+@data var w = 2;
+--- settled
+(Block (Let ^f:0 (Fn Int (Block 1))) (Let ^v:1 1) (Var ^w:2 2) #void)
+error 70..74: @data applies only to classes
+error 95..99: @data applies only to classes
+error 112..116: @data applies only to classes
+
+=== spreads with other decorators and shapes
+// `@json`, `@auto("==")`, and `@imu` in either order work beside
+// `@data`. A generic `@data` class spreads with its type arguments from
+// `old`, in a generic function too. A class with no properties spreads
+// to a new object; a nullable property needs no default; a pun may
+// follow a spread; a key given twice is an error, as without a spread.
+@auto("==") @data class Eq(public n: Int) {}
+@data @imu class Late(public n: Int) {}
+@data class Two<T>(public a: T, public b: T) {}
+let swap<T>(x: Two<T>): Two<T> { { ...x, a: x.b, b: x.a } }
+@data class E {}
+@data class N(public s: String?, public n: Int) {}
+let e = new E();
+let copy = { ...e };
+let t: Two<Int> = { a: 1, b: 2 };
+let u = { ...t, b: 5 };
+let w = swap(u);
+let n = { ...new N(null, 1), n: 2 };
+let s = "set";
+let m = { ...n, s };
+let late = { ...new Late(1), n: 2 };
+console.log("${{ ...new Eq(1) } == new Eq(1)} ${u.a}${u.b} ${w.a}${w.b} ${n.s ?? "-"} ${m.s ?? "-"} ${late.n} ${copy is E}");
+let d = { ...n, n: 3, n: 4 };
+--- settled
+(Block
+  (Class
+    ^Eq:0
+    (Param ^n:17 Int)
+    (Method
+      ^eq:18
+      (Fn
+        (Let ^other:19 Eq:0)
+        Boolean
+        (Block (Call == (Call . this#16 \n) (Call . other:19 \n))))))
+  (Class ^Late:1 (Param ^n:21 Int))
+  (Class ^Two:2 (TypeParam ^T:22) (Param ^a:24 T:22) (Param ^b:25 T:22))
+  (Let
+    ^swap:3
+    (Fn
+      (TypeParam ^T:26)
+      (Let ^x:27 (Call <> Two:2 T:26))
+      (Call <> Two:2 T:26)
+      (Block
+        (Block
+          (Let ^spread#34 x:27)
+          (Call new Two:2 (Call . x:27 \b) (Call . x:27 \a))))))
+  (Class ^E:4)
+  (Class ^N:5 (Param ^s:30 (Call ? String)) (Param ^n:31 Int))
+  (Let ^e:6 (Call new E:4))
+  (Let ^copy:7 (Block (Let ^spread#35 e:6) (Call new E:4)))
+  (Let ^t:8 (Call <> Two:2 Int) (Call new Two:2 1 2))
+  (Let
+    ^u:9
+    (Block (Let ^spread#36 t:8) (Call new Two:2 (Call . spread#36 \a) 5)))
+  (Let ^w:10 (Call swap:3 u:9))
+  (Let
+    ^n:11
+    (Block
+      (Let ^spread#37 (Call new N:5 null 1))
+      (Call new N:5 (Call . spread#37 \s) 2)))
+  (Let ^s:12 "set")
+  (Let
+    ^m:13
+    (Block (Let ^spread#38 n:11) (Call new N:5 s:12 (Call . spread#38 \n))))
+  (Let
+    ^late:14
+    (Block (Let ^spread#39 (Call new Late:1 1)) (Call new Late:1 2)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call
+        ==
+        (Block
+          (Let ^spread#40 (Call new Eq:0 1))
+          (Call new Eq:0 (Call . spread#40 \n)))
+        (Call new Eq:0 1))
+      " "
+      (Call . u:9 \a)
+      (Call . u:9 \b)
+      " "
+      (Call . w:10 \a)
+      (Call . w:10 \b)
+      " "
+      (Block
+        (Let ^subject#32 (Call . n:11 \s))
+        (If (Call == subject#32 #null) "-" subject#32))
+      " "
+      (Block
+        (Let ^subject#33 (Call . m:13 \s))
+        (If (Call == subject#33 #null) "-" subject#33))
+      " "
+      (Call . late:14 \n)
+      " "
+      (Call is copy:7 E:4)))
+  (Let ^d:15 (Error))
+  #void)
+error 969..989: No signature matches
+hint 947..956: Unnecessary type check to E from expression with type E which is a subtype
+log true 15 51 - set 2 true
+Failed: No signature matches
+
+=== a spread that doesn't fit the type wanted reports as its literal does
+// Spread or written out, `T` is bound from the type wanted, and the
+// arguments are what don't fit. (Where `T` would be bound two ways, as in
+// `{ ...words, second: 1 }`, generic calls in general miss the error.)
+@data class Two<T>(public first: T, public second: T) {}
+let words: Two<String> = { first: "a", second: "b" };
+let a: Two<Int> = { ...words, second: "c" };
+let b: Two<Int> = { first: words.first, second: "c" };
+--- settled
+(Block
+  (Class ^Two:0 (TypeParam ^T:4) (Param ^first:6 T:4) (Param ^second:7 T:4))
+  (Let ^words:1 (Call <> Two:0 String) (Call new Two:0 "a" "b"))
+  (Let
+    ^a:2
+    (Call <> Two:0 Int)
+    (Block
+      (Let ^spread#8 words:1)
+      (Call new Two:0 (Call . spread#8 \first) "c")))
+  (Let ^b:3 (Call <> Two:0 Int) (Call new Two:0 (Call . words:1 \first) "c"))
+  #void)
+error 345..368: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [String, String]
+error 399..423: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [String, String]
+
+=== a spread names its class only as old's
+// `class: G<Int>` isn't old's class's name, which is all `class:` may
+// be in a spread. (Nor does `{ class: G<Int>, t: 1 }` work for now.)
+@data class G<T>(public t: T) {}
+let g = new G(1);
+let h = { class: G<Int>, ...g };
+--- settled
+(Block
+  (Class ^G:0 (TypeParam ^T:3) (Param ^t:5 T:3))
+  (Let ^g:1 (Call new G:0 1))
+  (Let ^h:2 (Error))
+  #void)
+error 200..223: A spread of G builds G, so class: may name only G, not G<Int>
+Failed: A spread of G builds G, so class: may name only G, not G<Int>
+
 === a function literal needs a type wanted
 // A function literal takes its type from the type wanted, so one that
 // initializes a `let` or `var` without a declared type is an error (f,

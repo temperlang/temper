@@ -1,22 +1,28 @@
 # generated line:column -> source:line:column, and the text at each
-6:1 -> ../imports-library.temper.md:11:5  /** <- export let both(n: Int): Int
-10:1 -> ../imports-library.temper.md:11:5  export function both(n) { <- export let both(n: Int): Int
-10:17 -> ../imports-library.temper.md:11:16 (both)  both(n) { <- both(n: Int): Int { sum(n) +
-10:21 -> ../imports-library.temper.md:11:5  (n) { <- export let both(n: Int): Int
-11:3 -> ../imports-library.temper.md:11:36  return (((sum(n) + twice(n)) <- sum(n) + twice(n) + base }
-14:1 -> ../imports-library.temper.md:13:5  console.log(`both ${both(2)} <- console.log("both ${both(2).
-15:1 -> ../imports-library.temper.md:19:5  const third = new Ratio(1, 3 <- let third = new Ratio(1, 3);
-16:1 -> ../imports-library.temper.md:20:5  /** @type {boolean} */ <- console.log("ratio ${third =
-17:1 -> ../imports-library.temper.md:20:5  let t$0; <- console.log("ratio ${third =
-18:1 -> ../imports-library.temper.md:20:5  { <- console.log("ratio ${third =
-19:3 -> ../imports-library.temper.md:20:54  const left = ratioOf(2, 6); <- ratioOf(2, 6) == third} ${ra
-22:1 -> ../imports-library.temper.md:20:5  /** @type {boolean} */ <- console.log("ratio ${third =
-23:1 -> ../imports-library.temper.md:20:5  let t$1; <- console.log("ratio ${third =
-24:1 -> ../imports-library.temper.md:20:5  { <- console.log("ratio ${third =
-25:3 -> ../imports-library.temper.md:20:80  const left2 = ratioOf(1, 0); <- ratioOf(1, 0) == third}");
-28:1 -> ../imports-library.temper.md:20:5  console.log(`ratio ${third.e <- console.log("ratio ${third =
-29:1 -> ../imports-library.temper.md:23:5  const checked = new Checked( <- let checked = new Checked(la
-30:1 -> ../imports-library.temper.md:24:5  console.log(`renamed ${check <- console.log(
-31:1 -> ../imports-library.temper.md:27:5  const b = new Builtins(4); <- let b = new Builtins(4);
-32:1 -> ../imports-library.temper.md:28:5  console.log(`builtins ${b.ha <- console.log(
-33:1 -> ../imports-library.temper.md:31:5  console.log(b.print()); <- console.log(b.print());
+7:1 -> ../imports-library.temper.md:11:5  /** <- export let both(n: Int): Int
+11:1 -> ../imports-library.temper.md:11:5  export function both(n) { <- export let both(n: Int): Int
+11:17 -> ../imports-library.temper.md:11:16 (both)  both(n) { <- both(n: Int): Int { sum(n) +
+11:21 -> ../imports-library.temper.md:11:5  (n) { <- export let both(n: Int): Int
+12:3 -> ../imports-library.temper.md:11:36  return (((sum(n) + twice(n)) <- sum(n) + twice(n) + base }
+15:1 -> ../imports-library.temper.md:13:5  console.log(`both ${both(2)} <- console.log("both ${both(2).
+16:1 -> ../imports-library.temper.md:19:5  const third = new Ratio(1, 3 <- let third = new Ratio(1, 3);
+17:1 -> ../imports-library.temper.md:20:5  /** @type {boolean} */ <- console.log("ratio ${third =
+18:1 -> ../imports-library.temper.md:20:5  let t$0; <- console.log("ratio ${third =
+19:1 -> ../imports-library.temper.md:20:5  { <- console.log("ratio ${third =
+20:3 -> ../imports-library.temper.md:20:54  const left = ratioOf(2, 6); <- ratioOf(2, 6) == third} ${ra
+23:1 -> ../imports-library.temper.md:20:5  /** @type {boolean} */ <- console.log("ratio ${third =
+24:1 -> ../imports-library.temper.md:20:5  let t$1; <- console.log("ratio ${third =
+25:1 -> ../imports-library.temper.md:20:5  { <- console.log("ratio ${third =
+26:3 -> ../imports-library.temper.md:20:80  const left2 = ratioOf(1, 0); <- ratioOf(1, 0) == third}");
+29:1 -> ../imports-library.temper.md:20:5  console.log(`ratio ${third.e <- console.log("ratio ${third =
+30:1 -> ../imports-library.temper.md:23:5  const checked = new Checked( <- let checked = new Checked(la
+31:1 -> ../imports-library.temper.md:24:5  console.log(`renamed ${check <- console.log(
+32:1 -> ../imports-library.temper.md:27:5  const b = new Builtins(4); <- let b = new Builtins(4);
+33:1 -> ../imports-library.temper.md:28:5  console.log(`builtins ${b.ha <- console.log(
+34:1 -> ../imports-library.temper.md:31:5  console.log(b.print()); <- console.log(b.print());
+35:1 -> ../imports-library.temper.md:37:5  /** @type {Spot} */ <- let far = { ...new Spot(3, 4
+36:1 -> ../imports-library.temper.md:37:5  let t$2; <- let far = { ...new Spot(3, 4
+37:1 -> ../imports-library.temper.md:37:5  { <- let far = { ...new Spot(3, 4
+38:3 -> ../imports-library.temper.md:37:20  const spread = new Spot(3, 4 <- new Spot(3, 4), x: 9 };
+41:1 -> ../imports-library.temper.md:37:5  const far = t$2; <- let far = { ...new Spot(3, 4
+42:1 -> ../imports-library.temper.md:38:5  console.log(`spot far ${far. <- console.log("spot far ${far.

@@ -4,6 +4,7 @@
 #include <temper-core/core.hpp>
 #include <modules/core.hpp>
 #include <renamed/init.hpp>
+#include <modules/state.hpp>
 #include <modules/init.hpp>
 #include <modules/helpers.hpp>
 
@@ -35,6 +36,7 @@ void global_init_init() {
   core::init_once([] {
     modules::global_init_core();
     renamed::global_init_init();
+    modules::global_init_state();
     modules::global_init_init();
     modules::global_init_helpers();
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
@@ -57,6 +59,9 @@ void global_init_init() {
     int32_t value6 = b->get_int_();
     core::Console::log(console, "builtins " + std::to_string(b->hash) + " " + std::to_string(value2) + " " + std::to_string(value3) + " " + std::to_string(value4) + " " + value5 + " " + std::to_string(value6) + " " + std::to_string(b->later()));
     core::Console::log(console, b->print());
+    std::shared_ptr<modules::Spot> spread = modules::Spot::make(3, 4);
+    std::shared_ptr<modules::Spot> far = modules::Spot::make(9, spread->y);
+    core::Console::log(console, "spot far " + std::to_string(far->x) + " " + std::to_string(far->y));
   });
 }
 

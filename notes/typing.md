@@ -660,6 +660,82 @@ the names together (language.md, "Object literals, not named arguments"):
   values' places want what the arguments' would. No `\a` markers are
   left.
 
+## Object spread
+
+`{ ...old, b: e }` (#694; `typing/object_literals.rs`,
+`Settle::place_spread`) is sugar for the object literal that gives every
+constructor parameter, so it goes through the same constructor call:
+
+- **Syntax:** a property `\... old`, first, after any `class: C`; another
+  spread, or one later, is "Only one spread, written first, is supported
+  in an object literal for now".
+- **When:** in typing's round, even with `class: C`, once `old`'s type
+  is known.
+- **Which class:** `old`'s, which must be a class, not nullable ("A
+  spread needs a value of a class type, not Shape"), and `@data` (below;
+  "Spreads need a @data class; Square isn't one"); `class: C` must name
+  it ("A spread of Sq builds Sq, so class: may name only Sq, not
+  Other"). The type wanted is checked against it as for the written-out
+  literal, through the block to its `new`, so a generic class's type
+  arguments are solved from it and mismatches report the arguments. Not
+  yet where a type parameter binds two ways, `{ ...ints, second: "s" }`,
+  which generic calls in general miss (branch `instantiated-argument-checks`).
+  A value whose type is unknown has its error reported already, which the
+  spread fails with too.
+- **What it copies:** each constructor parameter not given, from
+  `old`'s property of that name, which `@data` makes public. A null
+  there, as for any null passed to a defaulted parameter, takes the
+  default, which `@data` allows only where the property can't hold
+  null (below), so the copy is the value read.
+- **What it becomes:** `do { let spread#1 = old; new C(spread#1.a, e) }`:
+  `old` once, first, then the given values in the order written, the
+  copies among them in the parameters' order, placed as for any object
+  literal (temporaries only where the given values aren't in order).
+  The copies passed as they are reach tmpl marked, `copy(spread#1.a)`,
+  for targets with their own copy forms (notes/tmpl/nodes.md, "Spreads").
+
+## `@data` classes
+
+`@data` (#694, 2026-11-26; `classes.rs`, `check_data`) is a checked
+promise that a class is plain data, so a spread can copy it by its
+constructor's parameters. Its rules, each broken one an error naming it
+("@data class Field may declare only its constructor's properties and
+methods, not property twice"), kept conservative, as loosening later is
+compatible and tightening isn't:
+
+- It's a class, not an interface, and not `@connected`; on a `let` or
+  function it's "@data applies only to classes", reported once
+  expansion settles, for any `@data` not used up by a class.
+- Each constructor parameter is a property (no `@noProperty`), public,
+  and not a `var` if the class is `@imu`.
+- Defaults (2026-11-26; `object_literals.rs`, `check_data_defaults`,
+  once typed): a `@data` object round-trips, constructed from its own
+  properties with the same values, a promise of `@data`'s own that
+  spreads rely on. Passing null gives a parameter's default, so for a
+  property that can hold null, any default must be null ("@data class
+  C's property x can hold null, so any default must be null: rebuilding a C
+  from its properties would turn its null into the default", at the
+  property's name). A `var` can hold null if its type may (nullable,
+  `Null`, or a type parameter, which may be bound to a nullable type);
+  any other property, only if its default's type may. Other defaults,
+  even ones that read earlier parameters or call functions, never run
+  for a round trip.
+  One without a visibility is public (2026-11-26), as interface
+  members need none: `@data` marks it `MEMBER_PUBLIC` as the class is
+  lowered, before the visibility check, which still needs one on
+  methods. An explicit `public` stays legal.
+- No other property: no field, getter, or setter, static or not; and no
+  constructor of its own, so the implied one only stores its
+  parameters.
+- Methods, static or not, and supertypes are fine.
+
+It's checked as the class is made, by its members' syntax, except for
+defaults, which typing checks; a class that keeps to the other rules is
+marked `CLASS_DATA`, and `data` in tmpl (`Facts::DATA`). One that breaks
+one of them isn't `@data` to a spread; a bad default is an error, but
+the class stays `@data`. `@imu` is read only for this check; tempest
+doesn't otherwise check it yet.
+
 ## Function types
 
 What tempest does today (`fn_subtype` in `types.rs`); status in

@@ -115,6 +115,17 @@ pub enum Message {
     /// An object literal whose names fit another class's constructor than
     /// the type wanted there takes: the type wanted and that class.
     ObjectLiteralWantsOther(String, String),
+    /// Ours: a spread, `...old`, after an object literal's first property,
+    /// or a second one, which may come later.
+    SpreadNotFirst,
+    /// Ours: a spread of a value whose type isn't a class: the type.
+    SpreadNeedsClass(String),
+    /// Ours: `{ class: D, ...c }` where `D` isn't the name of `c`'s
+    /// class: that class, and what `class:` names.
+    SpreadOtherClass(String, String),
+    /// Ours: a spread of a class that isn't `@data`, or breaks its rules:
+    /// the class.
+    SpreadNeedsData(String),
     /// `class C extends D` where `D` is a class: their names.
     CannotExtendConcrete(String),
     /// `interface I(x: Int)`.
@@ -251,6 +262,12 @@ pub enum Message {
     /// Ours: a `@fun` interface that breaks Kotlin Temper's documented
     /// rules for one: the interface, and how.
     FunInterfaceRule(String, FunRule),
+    /// Ours: `@data` on a declaration that's no class or interface, as a
+    /// `let` or a function.
+    DataNotClass,
+    /// Ours: a `@data` declaration that breaks a rule of `@data`'s: its
+    /// name, and the rule.
+    DataRule(String, DataRule),
     /// A user's `@connected` class's method with a default argument,
     /// which host code can't share: the method's name.
     ConnectedMethodDefaults(String),
@@ -315,6 +332,29 @@ pub enum FunRule {
     Json,
 }
 
+/// A rule of `@data`'s that a declaration breaks ([`Message::DataRule`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DataRule {
+    /// It's an interface.
+    Interface,
+    /// It's `@connected`.
+    Connected,
+    /// A constructor parameter that's no property (`@noProperty`).
+    NotProperty(String),
+    /// A property that's private or protected.
+    NotPublic(String),
+    /// A property that can hold null, defaulting to other than null: a
+    /// `var` whose type may hold null, or one whose default may be null.
+    /// A `@data` object round-trips, made again from its properties, and
+    /// a null passed gives the default.
+    NullDefault(String),
+    /// A `var` property of an `@imu` class.
+    ImuVar(String),
+    /// A member other than a constructor property or a method,
+    /// described, as `property n`, `getter g`, or `a constructor`.
+    Member(String),
+}
+
 impl Message {
     /// Whether it's a type-only error: code that's ill-typed but still
     /// runs as written, as a value that doesn't fit its place (a wrong
@@ -376,6 +416,20 @@ impl Message {
             Message::NoValuePassed(name) => format!("No value passed for {name}"),
             Message::ObjectLiteralWantsOther(wanted, class) => {
                 format!("{wanted} is wanted here, but these properties fit {class}'s constructor")
+            }
+            Message::SpreadNotFirst => {
+                "Only one spread, written first, is supported in an object literal for now".into()
+            }
+            Message::SpreadNeedsClass(t) => {
+                format!("A spread needs a value of a class type, not {t}")
+            }
+            Message::SpreadOtherClass(from, to) => {
+                format!(
+                    "A spread of {from} builds {from}, so class: may name only {from}, not {to}"
+                )
+            }
+            Message::SpreadNeedsData(class) => {
+                format!("Spreads need a @data class; {class} isn't one")
             }
             Message::CannotExtendConcrete(names) => {
                 format!("Cannot extend concrete type(s) {names}")
@@ -524,6 +578,32 @@ impl Message {
                 "{name} needs a declared type, such as a @fun interface, since a function \
                  literal takes its type from the type wanted"
             ),
+            Message::DataNotClass => "@data applies only to classes".into(),
+            Message::DataRule(name, rule) => match rule {
+                DataRule::Interface => {
+                    format!("@data applies only to classes, not interface {name}")
+                }
+                DataRule::Connected => format!("@data class {name} can't be @connected"),
+                DataRule::NotProperty(p) => {
+                    format!("@data class {name}'s constructor parameter {p} must be a property")
+                }
+                DataRule::NotPublic(p) => {
+                    format!("@data class {name}'s property {p} must be public")
+                }
+                DataRule::NullDefault(p) => format!(
+                    "@data class {name}'s property {p} can hold null, so any default must \
+                     be null: rebuilding a {name} from its properties would turn its null into the \
+                     default"
+                ),
+                DataRule::ImuVar(p) => {
+                    format!(
+                        "@data class {name}'s property {p} can't be a var, as the class is @imu"
+                    )
+                }
+                DataRule::Member(m) => format!(
+                    "@data class {name} may declare only its constructor's properties and methods, not {m}"
+                ),
+            },
             Message::FunInterfaceRule(name, rule) => match rule {
                 FunRule::Supertype(t) => {
                     format!("@fun interface {name} may extend only AnyValue, not {t}")

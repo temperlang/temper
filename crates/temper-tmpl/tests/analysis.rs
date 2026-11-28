@@ -2,7 +2,7 @@
 //! ([`temper_tmpl::naming::hints`]) on a small program: which operands'
 //! order shows, and what a temporary for one is called.
 
-use temper_tmpl::analysis::{Effect, Effects, calls_nothing};
+use temper_tmpl::analysis::{Effect, Effects, calls_nothing, copyable_classes};
 use temper_tmpl::naming::hints;
 use temper_tmpl::{Node, NodeId, Program, text};
 
@@ -138,4 +138,38 @@ fn calls_nothing_and_hints() {
         .find(|&m| matches!(p.nodes.get(m), Node::CallMethod { method, .. } if p.name(method) == "toString"))
         .unwrap();
     assert_eq!(hints(&p, to_string), ["string", "value"]);
+}
+
+/// A `data` class is copied natively only where each constructor
+/// parameter has the field of its name, so its fields line up with the
+/// arguments: not `Renamed`, which the validator rejects too (C5).
+#[test]
+fn copyable_classes_need_a_field_per_parameter() {
+    let p = text::read(
+        "tmpl 1 model 1 library data 0.1.0
+
+module data#0 {
+  data class Kept#1 {
+    let a#2: Int32;
+    constructor constructor#3(a#4: Int32): Kept#1 {
+      this.a#2 = a#4;
+    }
+  }
+
+  data class Renamed#5 {
+    let a#6: Int32;
+    constructor constructor#7(b#8: Int32): Renamed#5 {
+      this.a#6 = b#8;
+    }
+  }
+
+  init {}
+}
+",
+    )
+    .unwrap();
+    let names: Vec<&str> = (copyable_classes(&p).into_iter())
+        .map(|d| p.name(d))
+        .collect();
+    assert_eq!(names, ["Kept"]);
 }

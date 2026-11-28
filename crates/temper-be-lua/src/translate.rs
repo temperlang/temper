@@ -1789,13 +1789,14 @@ impl<'a> Translator<'a> {
                         then,
                         els: Vec::new(),
                     });
+                    // Always cast, nullable types too: LuaLS doesn't see
+                    // `is_null` narrow, so the optional parameter (`?`)
+                    // would still read as possibly nil.
                     let ty = p.decls.get(local).ty;
-                    if !p.types.is_nullable(ty) {
-                        out.push(Stmt::Cast {
-                            name: self.name(param),
-                            ty: self.ty(ty)?,
-                        });
-                    }
+                    out.push(Stmt::Cast {
+                        name: self.name(param),
+                        ty: self.ty(ty)?,
+                    });
                 }
             }
             Node::Let { local, init } => {
@@ -1838,6 +1839,12 @@ impl<'a> Translator<'a> {
                     let target = self.access(target);
                     let t = self.or_else_into(target, value)?;
                     out.extend(t);
+                    return Ok(());
+                }
+                // `bubble()` and `panic()` give nothing to assign.
+                if matches!(p.nodes.get(value), Node::Bubble { .. } | Node::Panic {}) {
+                    let target = self.access(target);
+                    out.extend(self.assigning(&target, value)?);
                     return Ok(());
                 }
                 let value = self.expr(value)?;

@@ -18,7 +18,10 @@
 //!   const &x()`, which runs the init first; static functions are static
 //!   member functions.
 //! - A constructor is `static std::shared_ptr<C> make(…)`, which makes
-//!   the object (`self`) and runs the constructor's body on it.
+//!   the object (`self`) and runs the constructor's body on it. A spread
+//!   of a `@data` class with no `var` copies instead, by the struct's
+//!   implicit copy constructor, and sets the fields given
+//!   ([`Translator::spread_copy`]).
 //! - An interface's members are virtual; one without a body is pure
 //!   (`= 0`), where Kotlin's throws when called. A class's members that
 //!   implement them, or an interface's that override others, say
@@ -39,7 +42,7 @@
 
 use super::*;
 use temper_tmpl::TypeData;
-use temper_tmpl::analysis::{ancestors, nominal_decl};
+use temper_tmpl::analysis::{ancestors, nominal_decl, spread_copy_of, spread_fields};
 use temper_tmpl::naming::NameMap;
 
 /// The class or interface whose members are being translated.
@@ -776,6 +779,100 @@ impl Translator<'_> {
             };
             lines.push((bare.clone(), member_line(&f, &bare, false, true, false)));
             items.push(Item::Function(f));
+        }
+        Ok(())
+    }
+
+    /// The local a spread, `{ ...old, a: e }`, copies from, where C++
+    /// copies `old` ([`Translator::spread_copy`]): a spread
+    /// (`copy(spread#1.b)` among its arguments) of a class that
+    /// `copyable_classes` allows.
+    pub(crate) fn spread_base(&self, ctor: DeclId, args: &[NodeId]) -> Option<NodeId> {
+        let p = self.p;
+        if !self.copyable.contains(&p.decls.get(ctor).owner) {
+            return None;
+        }
+        args.iter().find_map(|&a| spread_copy_of(p, a))
+    }
+
+    /// Whether `local`'s initial value is a spread C++ copies, as its
+    /// lowering gives it (`value { let spread#1 = old; new C(…) }`), of
+    /// `local`'s own type ([`Translator::spread_local`]).
+    pub(crate) fn spread_init(&self, local: DeclId, init: NodeId) -> bool {
+        let p = self.p;
+        let new = match p.nodes.get(init) {
+            Node::BlockValue { value, .. } => value,
+            _ => init,
+        };
+        matches!(p.nodes.get(new), Node::New { ctor, args, .. }
+            if p.nodes.ty(new) == p.decls.get(local).ty
+                && self.spread_base(ctor, p.nodes.list(args)).is_some())
+    }
+
+    /// A local declared as a spread's copy ([`Translator::spread_init`]),
+    /// the copy itself, its block's statements first: `std::shared_ptr<C>
+    /// b = std::make_shared<C>(*spread);` and `b->a = e;`. Elsewhere a
+    /// copy is a temporary, and an assignment's can't be its target, which
+    /// a given value may read.
+    pub(crate) fn spread_local(&mut self, name: &str, init: NodeId, out: &mut Vec<Stmt>) -> R<()> {
+        let p = self.p;
+        let new = match p.nodes.get(init) {
+            Node::BlockValue { stmts, value } => {
+                let in_hoist = std::mem::replace(&mut self.in_hoist, true);
+                let result = (p.nodes.list(stmts).iter()).try_for_each(|&s| self.stmt(s, out));
+                self.in_hoist = in_hoist;
+                result?;
+                value
+            }
+            _ => init,
+        };
+        self.spread_copy(new, name)?;
+        out.append(&mut self.pending);
+        Ok(())
+    }
+
+    /// A spread of a copyable class ([`Translator::spread_base`]) as a
+    /// copy of `old` named `name`, into `pending`: `std::shared_ptr<C>
+    /// name = std::make_shared<C>(*spread);`, then `name->a = e;` for
+    /// each given value, in order. It skips `make`, as a `@data` class's
+    /// constructor only stores its parameters, so the struct's implicit
+    /// copy constructor, public, makes the same object, its
+    /// `enable_shared_from_this` base, copied, owned by the new
+    /// `shared_ptr`. `old`, a local, runs first, then the given values;
+    /// the copy between them reads fields that no `var` lets the values
+    /// change, so the order is the lowering's.
+    pub(crate) fn spread_copy(&mut self, new: NodeId, name: &str) -> R<()> {
+        let p = self.p;
+        let Node::New { ctor, args, .. } = p.nodes.get(new) else {
+            return not_yet("a spread's copy of something but `new`");
+        };
+        let args = p.nodes.list(args);
+        let Some(old) = self.spread_base(ctor, args) else {
+            return not_yet("a spread's copy of a class C++ can't copy");
+        };
+        let class = p.decls.get(ctor).owner;
+        let ty = p.nodes.ty(new);
+        let targs = self.template_args(p.types.args(ty))?;
+        let old = Expr::unary(Unary::Deref, self.expr(old)?);
+        let made = Expr::name(format!("std::make_shared<{}{targs}>", self.top_name(class)));
+        self.pending.push(Stmt::Local {
+            ty: self.ty(ty)?,
+            name: name.to_string(),
+            value: Some(made.call(vec![old])),
+        });
+        let members = match self.class_nodes.get(&class).map(|&n| p.nodes.get(n)) {
+            Some(Node::Class { members, .. }) => p.nodes.list(members),
+            _ => &[],
+        };
+        let Some(fields) = spread_fields(p, members, ctor) else {
+            return not_yet("a spread's copy of a class without a field per parameter");
+        };
+        for (&a, field) in args.iter().zip(fields) {
+            if spread_copy_of(p, a).is_none() {
+                let value = self.expr(a)?;
+                let target = format!("{name}->{}", self.name(field));
+                self.pending.push(Stmt::Assign { target, value });
+            }
         }
         Ok(())
     }

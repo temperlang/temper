@@ -424,6 +424,52 @@ Not yet checked: that a class implements every abstract member it
 inherits (the frontend reports it), and statics read before their
 initializer.
 
+### Spreads (As built, 2026-11-25)
+
+A spread, `{ ...old, a: e }`, arrives as the frontend lowers it:
+`value { let spread#1 = old; new C(copy(spread#1.a), e) }`. Each
+argument that copies `old`'s property as it is, or made nullable, is a
+`GetField` marked `SPREAD_COPY` (`copy(x.f)` in text); copies held in
+temporaries, where given values come out of order, aren't marked; a
+marked copy held in a temporary is allowed, and backends ignore it.
+Rule **C4**: a copy reads a field from a local, and as a `New`'s
+argument the field named as its parameter, of the class constructed,
+one `New`'s copies all from one local of that class.
+
+So a target with its own copy form (Rust's `..old`, C#'s `with`,
+Python's `dataclasses.replace`) may pass only the other arguments, where
+`analysis::copyable_classes` says the class allows it (2026-11-26): a
+`data` class (`Facts::DATA`, from `@data`, whose rules the frontend
+checks: its constructor only stores its parameters, all public fields,
+with no accessors, and defaults that a copy never runs; notes/typing.md,
+"`@data` classes"; rule **C5** checks the tmpl, as C++ and Rust copy on its
+word) with no `var` field and a field for each parameter, as a copy
+form reads the fields after the given values run, which then can't
+change them. Spreads need
+`@data`, so a class's own copy form is only an optimization; the meaning
+stays the constructor call. A `data` mark comes after `fun` in text.
+
+Rust resugars (2026-11-26): a spread of such a class of the module is a
+struct update, `Theme(Arc::new(ThemeStruct { size: 20,
+..(*spread.0).clone() }))`, whose struct alone derives `Clone`; given
+values run in order, then the base, the temporary already holding
+`old`. A `data` class's fields are typed as its parameters, so given
+values go in as they are, a nullable one too (`note: Some(…)`). In
+another module, where the struct is private, or where a given value's
+type isn't its field's (a generic class's `T`, given an `Int`), it
+calls the constructor.
+
+C++ copies (2026-11-26): such a spread is `std::make_shared<C>(*spread)`
+and an assignment of each given value, in order, into the local a `let`
+declares, else a temporary: `std::shared_ptr<Theme> loud =
+std::make_shared<Theme>(*spread); loud->size = 20;`. The struct's
+implicit copy constructor copies the fields, and `make_shared` gives the
+copy its own `enable_shared_from_this`. An assignment's copy is a
+temporary, as a given value may read the variable assigned; where no
+statement may go first, it calls `make`. Other backends still call the
+constructor: their generated classes don't have the shape their copy
+forms take.
+
 ### Subset B's next step: nullable types, `orelse`, `bubble()`, and `panic()` (As built, 2026-10-30, Proposed)
 
 Types gain `Nullable(T)` (`T?`, never of a nullable `T`;

@@ -41,7 +41,7 @@ impl Settle {
                     } else {
                         (otherwise, then)
                     };
-                    if self.has_error(dead) {
+                    if self.error_under(dead).is_some() {
                         self.become_node(node, live);
                         stack.push(node);
                         continue;
@@ -118,16 +118,16 @@ impl Settle {
         self.constant_bool(let_parts(tree, decl).2?)
     }
 
-    /// Whether there's an error node under `node`.
-    fn has_error(&self, node: NodeId) -> bool {
+    /// An error node under `node`, or `node` itself, if there is one.
+    pub(crate) fn error_under(&self, node: NodeId) -> Option<NodeId> {
         let tree = &self.lib.tree;
         let mut stack = vec![node];
         while let Some(n) = stack.pop() {
             if tree.kind(n) == NodeKind::Error {
-                return true;
+                return Some(n);
             }
             stack.extend_from_slice(tree.children(n));
         }
-        false
+        None
     }
 }

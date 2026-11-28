@@ -45,6 +45,11 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     }
                 }
             );
+            let moved = {
+                let spread = crate::state::Spot::new(1, 2);
+                crate::state::Spot::new(spread.x(), 5)
+            };
+            println!("spot {} {}", moved.x(), moved.y());
             Ok(())
         })
         .clone()

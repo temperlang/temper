@@ -310,6 +310,9 @@ pub struct Translator<'a> {
     /// Locals that lambdas capture and that are assigned, which are
     /// cells ([`functions`]).
     cells: HashSet<DeclId>,
+    /// The classes a spread may copy with `make_shared<C>(*old)`
+    /// (`copyable_classes`).
+    copyable: HashSet<DeclId>,
 }
 
 /// Where an `orelse`'s value, or any value given to
@@ -394,6 +397,7 @@ impl<'a> Translator<'a> {
             in_hoist: false,
             call: NodeId(0),
             cells: temper_tmpl::analysis::assigned_captures(p),
+            copyable: temper_tmpl::analysis::copyable_classes(p),
         }
     }
 
@@ -1222,6 +1226,12 @@ impl<'a> Translator<'a> {
                     });
                     init.extend(self.deliver(value, &Sink::Assign(name))?);
                 }
+                Node::InitLet { target, value }
+                    if !self.statics.contains(&target) && self.spread_init(target, value) =>
+                {
+                    let name = self.name(target);
+                    self.spread_local(&name, value, init)?;
+                }
                 Node::InitLet { target, value } if !self.statics.contains(&target) => {
                     let ty = self.ty(p.decls.get(target).ty)?;
                     let value = self.expr(value)?;
@@ -1994,10 +2004,13 @@ impl<'a> Translator<'a> {
         let p = self.p;
         let mut found = false;
         temper_tmpl::analysis::walk(p, id, &mut |n| {
-            found |= matches!(
-                p.nodes.get(n),
-                Node::OrElse { .. } | Node::BlockValue { .. }
-            );
+            found |= match p.nodes.get(n) {
+                Node::OrElse { .. } | Node::BlockValue { .. } => true,
+                Node::New { ctor, args, .. } => {
+                    self.spread_base(ctor, p.nodes.list(args)).is_some()
+                }
+                _ => false,
+            };
         });
         found
     }
@@ -2104,6 +2117,14 @@ impl<'a> Translator<'a> {
                     name: self.local_name(local),
                     value: Some(Expr::name(format!("std::make_shared<{ty}>")).call(value)),
                 }
+            }
+            // A spread's copy, as the local itself (`spread_local`).
+            Node::Let {
+                local,
+                init: Some(init),
+            } if self.spread_init(local, init) => {
+                let name = self.local_name(local);
+                return self.spread_local(&name, init, out);
             }
             Node::Let { local, init } => {
                 let ty = self.ty(p.decls.get(local).ty)?;
@@ -2736,6 +2757,14 @@ impl<'a> Translator<'a> {
             {
                 self.call = id;
                 return self.connected(ctor, p.nodes.list(args));
+            }
+            // A spread's copy, into a temporary (`spread_copy`).
+            Node::New { ctor, args, .. }
+                if self.deferred == 0 && self.spread_base(ctor, p.nodes.list(args)).is_some() =>
+            {
+                let name = self.fresh_local(&naming::hints(p, id)[0]);
+                self.spread_copy(id, &name)?;
+                Expr::Name(name)
             }
             Node::New { ctor, args, .. } => {
                 let class = p.decls.get(ctor).owner;

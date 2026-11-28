@@ -373,6 +373,95 @@ local function shape(x)
   return x
 end
 
+---@class classes.Theme
+---@field fg string
+---@field bg string
+---@field size integer
+---@field bold boolean
+---@field note string|temper.Null
+---@field weight fun(self: classes.Theme): string
+---@field toString fun(self: classes.Theme): string
+
+---@class classes.Theme.type: temper.Type
+---@operator call: classes.Theme
+local Theme = temper.type("classes.Theme")
+
+---@param this classes.Theme
+---@param fg string
+---@param bg string
+---@param size integer
+---@param bold boolean
+---@param note? string|temper.Null
+function Theme.constructor(this, fg, bg, size, bold, note)
+  if note == nil then
+    note = temper.null
+  end
+  this.fg = fg
+  this.bg = bg
+  this.size = size
+  this.bold = bold
+  this.note = note
+end
+
+---@param this classes.Theme
+---@return string
+function Theme.methods.weight(this)
+  if this.bold then
+    return "bold"
+  else
+    return "plain"
+  end
+end
+
+---@param this classes.Theme
+---@return string
+function Theme.methods.toString(this)
+  local string_ = this.fg .. "/" .. this.bg .. " " .. this.size .. " " .. this:weight()
+  local subject = this.note
+  return string_ .. (temper.is_null(subject) and "" or (subject --[[@as string]]))
+end
+
+with_tostring(Theme)
+
+---@param t classes.Theme
+---@param why string
+---@return classes.Theme
+local function picked(t, why)
+  print(why)
+  return t
+end
+
+---@param s string
+---@return string
+local function noted(s)
+  print(s)
+  return s
+end
+
+---@class classes.Tally
+---@field count integer
+---@field name string
+
+---@class classes.Tally.type: temper.Type
+---@operator call: classes.Tally
+local Tally = temper.type("classes.Tally")
+
+---@param this classes.Tally
+---@param count integer
+---@param name string
+function Tally.constructor(this, count, name)
+  this.count = count
+  this.name = name
+end
+
+---@param t classes.Tally
+---@param name string
+---@return string
+local function renamed(t, name)
+  t.count = temper.int32_add(t.count, 10)
+  return name
+end
+
 ---@param eq fun(arg0: classes.Loose|temper.Null, arg1: classes.Loose|temper.Null): boolean
 ---@return string
 local function compared(eq)
@@ -617,6 +706,26 @@ end
 local st = Stock({ 4, 5 })
 st.items = { 1, 2, 3 }
 print(st.count .. " " .. st.size .. " " .. st:sizeNow() .. " " .. temper.list_length(st.items))
+local plain = Theme("black", "white", 12, false)
+local spread = plain
+local loud = Theme(spread.fg, spread.bg, 20, true, "!")
+local spread2 = loud
+local dark = Theme(plain.bg, plain.fg, spread2.size, spread2.bold, spread2.note)
+print(plain:toString() .. " | " .. loud:toString() .. " | " .. dark:toString())
+local spread3 = picked(dark, "old")
+local arg = spread3.bg
+local arg2 = noted("red")
+local arg3 = spread3.bold
+local arg4 = spread3.note
+local mixed = Theme(arg2, arg, 9, arg3, arg4)
+print(mixed:toString())
+local spread4 = picked(plain, "first")
+local ordered = Theme(noted("second"), noted("third"), spread4.size, spread4.bold, spread4.note)
+print(ordered:toString())
+local first = Tally(1, "a")
+local spread5 = first
+local second = Tally(spread5.count, renamed(first, "b"))
+print(first.count .. " " .. second.count .. " " .. second.name)
 print(compared(function(a, b) return temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]])) end))
 print(compared(function(a, b) return not (temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]]))) end))
 print(compared(function(a, b) return temper.is_null(b) and temper.is_null(a) or not temper.is_null(b) and (not temper.is_null(a) and (b --[[@as classes.Loose]]):eq(a --[[@as classes.Loose]])) end))

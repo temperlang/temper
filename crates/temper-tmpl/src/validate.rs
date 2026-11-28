@@ -65,7 +65,14 @@
 //!   constructor, a static field initialized only in its module's init
 //!   block, and conversions only up or down the supertypes (`Upcast`,
 //!   `Downcast`), with `Is` and `Identical` only on classes and
-//!   interfaces.
+//!   interfaces; **C4** a spread's copy (`Flags::SPREAD_COPY`) reads a
+//!   field from a local, and as a `New`'s argument, as it is or made
+//!   nullable, the field named as its parameter, of the class constructed,
+//!   one `New`'s copies all from one local of that class; **C5** a
+//!   `data` class (`Facts::DATA`) is plain data, as C++ and Rust copy it
+//!   without its constructor: no getters or setters, and one constructor
+//!   that only stores each parameter, in order, in the field of its
+//!   name, an optional one after its default, with no other fields.
 //! - **N1** (nullable types, subset B) `Null` typed nullable; `IsNull`
 //!   and `NonNull` only on nullable values; `NonNull` from `T?` to `T`
 //!   and `AsNullable` from `T` to `T?`, exactly; `EqNullable` an
@@ -91,7 +98,7 @@
 //! - **P1** in a program with spans, every node and declaration has one,
 //!   apart from other libraries' declarations.
 
-use crate::analysis::{named, top_level, walk};
+use crate::analysis::{self, named, top_level, walk};
 use crate::decls::{DeclKind, Facts};
 use crate::ids::{DeclId, NodeId, Span, StrId, TypeId};
 use crate::nodes::{Flags, Kids};
@@ -102,7 +109,7 @@ use crate::schema::{Family, Kind, Node, Place, Slot, TypeRule};
 use crate::text::writing_order;
 use crate::types::{Signature, TypeData};
 use crate::{Module, Program};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// A validator rule, by its code.
@@ -143,6 +150,8 @@ pub enum Rule {
     C1,
     C2,
     C3,
+    C4,
+    C5,
     N1,
     N2,
     V1,
@@ -198,6 +207,7 @@ pub fn validate(p: &Program, profile: &Profile) -> Vec<Problem> {
         defined: vec![false; p.decls.len()],
         slot: vec![u32::MAX; p.decls.len()],
         module: (DeclId::NONE, 0),
+        ctor_params: None,
     };
     for module in &p.modules {
         v.structure_module(p, module, profile);
@@ -327,6 +337,9 @@ struct Validator {
     /// The module whose bodies are being checked, and its place in
     /// `Program::modules`.
     module: (DeclId, usize),
+    /// The program's constructors' parameters, once a spread's copy
+    /// needs them (C4).
+    ctor_params: Option<HashMap<DeclId, Vec<DeclId>>>,
 }
 
 impl Validator {
@@ -498,6 +511,10 @@ impl Validator {
         let has_flag = kind.fields().iter().any(|f| f.slot == Slot::Flag);
         if p.nodes.flags(id).contains(Flags::MAY_BUBBLE) && !has_flag {
             let message = format!("{} can't be marked may-bubble", kind.name());
+            self.node_problem(Rule::S1, id, message);
+        }
+        if p.nodes.flags(id).contains(Flags::SPREAD_COPY) && kind != Kind::GetField {
+            let message = format!("{} can't be marked a spread's copy", kind.name());
             self.node_problem(Rule::S1, id, message);
         }
         let Some(parts) = p.nodes.parts(id) else {
@@ -938,6 +955,11 @@ impl Validator {
                 let message = "a @fun interface's one member is its abstract apply method".into();
                 self.node_problem(Rule::V1, id, message);
             }
+        }
+        if p.decls.get(decl).facts.contains(Facts::DATA) && !is_plain_data(p, members) {
+            let message =
+                "a data class only stores its parameters, in fields of their names".into();
+            self.node_problem(Rule::C5, id, message);
         }
         for &member in p.nodes.list(members) {
             match p.nodes.get(member) {
@@ -1999,6 +2021,12 @@ impl Validator {
             }
             Node::GetField { field, object } => {
                 self.expr(p, object, flow);
+                let local = matches!(p.nodes.get(object), Node::Local { .. });
+                if p.nodes.flags(id).contains(Flags::SPREAD_COPY) && !local {
+                    let kind = p.nodes.kind(object).name();
+                    let message = format!("a spread copies from a local, not {kind}");
+                    self.node_problem(Rule::C4, id, message);
+                }
                 if self.reference(p, id, field, &[DeclKind::Field]) {
                     self.visible(p, id, field);
                     let owner = p.decls.get(field).owner;
@@ -2023,6 +2051,7 @@ impl Validator {
                     return;
                 }
                 self.visible(p, id, ctor);
+                self.spread_copies(p, ctor, args);
                 let class = p.decls.get(ctor).owner;
                 let type_args = self.type_args(p, id, type_args, class);
                 if let Some(sig) = p.signature(ctor) {
@@ -2147,6 +2176,64 @@ impl Validator {
         // completes: nothing after it runs.
         if p.types.is_never(ty) {
             flow.live = false;
+        }
+    }
+
+    /// C4: a `New`'s arguments that are a spread's copies, as they are or
+    /// made nullable, each read the field named as its parameter, of the
+    /// class constructed, all from one local of that class.
+    fn spread_copies(&mut self, p: &Program, ctor: DeclId, args: Kids) {
+        let class = p.decls.get(ctor).owner;
+        let mut from = None;
+        for (i, &arg) in p.nodes.list(args).iter().enumerate() {
+            let read = match p.nodes.get(arg) {
+                Node::AsNullable { value } => value,
+                _ => arg,
+            };
+            if !p.nodes.flags(read).contains(Flags::SPREAD_COPY) {
+                continue;
+            }
+            let Node::GetField { field, object } = p.nodes.get(read) else {
+                continue;
+            };
+            let Node::Local { local } = p.nodes.get(object) else {
+                continue;
+            };
+            if p.decls.get(field).owner != class {
+                let message = format!(
+                    "a spread copies {}, not {}'s",
+                    show(p, field),
+                    show(p, class)
+                );
+                self.node_problem(Rule::C4, read, message);
+            }
+            if analysis::nominal_decl(p, p.decls.get(local).ty) != Some(class) {
+                let message = format!(
+                    "a spread copies from {}, not a {}",
+                    show(p, local),
+                    show(p, class)
+                );
+                self.node_problem(Rule::C4, read, message);
+            }
+            let params = (self.ctor_params).get_or_insert_with(|| analysis::constructor_params(p));
+            let param = match params.get(&ctor) {
+                Some(params) => params.get(i).map(|&d| p.name(d)),
+                None => (p.decls.param_names(ctor).get(i)).map(|&s| p.strings.get(s)),
+            };
+            if param != Some(p.name(field)) {
+                let param = param.unwrap_or("none");
+                let message = format!("a spread copies {} for parameter {param}", show(p, field));
+                self.node_problem(Rule::C4, read, message);
+            }
+            match from {
+                Some(first) if first != local => {
+                    let (first, local) = (show(p, first), show(p, local));
+                    let message =
+                        format!("a spread copies from {first} and {local}, not one local");
+                    self.node_problem(Rule::C4, read, message);
+                }
+                _ => from = Some(local),
+            }
         }
     }
 
@@ -2497,6 +2584,83 @@ fn body_lets(p: &Program, body: NodeId, out: &mut Vec<DeclId>) {
         }
         stack.extend(p.nodes.kids(id));
     }
+}
+
+/// C5: whether a `data` class's `members` are the plain data its fact
+/// promises: no getters or setters, and one constructor whose body only
+/// stores each parameter, in order, in the field of its name, after
+/// `let b2 = coalesce(b, d)` for an optional one, with no other fields.
+/// Its default `d` may be any expression: a copy passes a value of the
+/// field it came from, which the frontend checks its default gave only
+/// where it's null, so the default never runs for it.
+fn is_plain_data(p: &Program, members: Kids) -> bool {
+    let (mut fields, mut ctors) = (Vec::new(), Vec::new());
+    for &m in p.nodes.list(members) {
+        match p.nodes.get(m) {
+            Node::Field { decl } => fields.push(decl),
+            Node::Method { decl, params, body } if p.decls.contains(decl) => {
+                match p.decls.get(decl).kind {
+                    DeclKind::Getter | DeclKind::Setter => return false,
+                    DeclKind::Constructor => ctors.push((params, body)),
+                    _ => {}
+                }
+            }
+            Node::AbstractMethod { .. } => return false,
+            _ => {}
+        }
+    }
+    let [(params, body)] = ctors[..] else {
+        return false;
+    };
+    let Node::Block { stmts } = p.nodes.get(body) else {
+        return false;
+    };
+    let (params, stmts) = (p.nodes.list(params), p.nodes.list(stmts));
+    // First, each optional parameter or its default, in a local.
+    let lets = (stmts.iter())
+        .take_while(|&&s| matches!(p.nodes.get(s), Node::Let { .. }))
+        .count();
+    let mut held = HashMap::new();
+    for &s in &stmts[..lets] {
+        let Node::Let {
+            local,
+            init: Some(init),
+        } = p.nodes.get(s)
+        else {
+            return false;
+        };
+        let Node::Coalesce { left, .. } = p.nodes.get(init) else {
+            return false;
+        };
+        let Node::Local { local: param } = p.nodes.get(left) else {
+            return false;
+        };
+        held.insert(local, param);
+    }
+    let stores = &stmts[lets..];
+    let stores_param = |((&param, &field), &store): ((&NodeId, &DeclId), &NodeId)| {
+        let (
+            Node::Param { decl: param },
+            Node::SetField {
+                field: f,
+                object,
+                value,
+            },
+        ) = (p.nodes.get(param), p.nodes.get(store))
+        else {
+            return false;
+        };
+        let Node::Local { local } = p.nodes.get(value) else {
+            return false;
+        };
+        f == field
+            && p.name(f) == p.name(param)
+            && matches!(p.nodes.get(object), Node::This {})
+            && held.get(&local).copied().unwrap_or(local) == param
+    };
+    params.len() == fields.len()
+        && stores.len() == fields.len()
+        && (params.iter().zip(&fields).zip(stores)).all(stores_param)
 }
 
 /// `name#id`, for messages.

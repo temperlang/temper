@@ -119,6 +119,49 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 st.size_now(),
                 temper_core::ListedTrait::len(&st.items())
             );
+            let plain = Theme::new("black", "white", 12, false, None::<Arc<String>>);
+            let loud = {
+                let spread = plain.clone();
+                Theme(Arc::new(ThemeStruct {
+                    size: 20,
+                    bold: true,
+                    note: Some(Arc::new("!".to_string())),
+                    ..(*spread.0).clone()
+                }))
+            };
+            let dark = {
+                let spread2 = loud.clone();
+                Theme(Arc::new(ThemeStruct {
+                    fg: plain.0.bg.clone(),
+                    bg: plain.0.fg.clone(),
+                    ..(*spread2.0).clone()
+                }))
+            };
+            println!("{plain} | {loud} | {dark}");
+            let mixed = {
+                let spread3 = picked(dark.clone(), "old");
+                let arg = spread3.0.bg.clone();
+                let arg2 = noted("red");
+                let arg3 = spread3.0.bold;
+                let arg4 = spread3.0.note.clone();
+                Theme::new(arg2.clone(), arg.clone(), 9, arg3, arg4.clone())
+            };
+            println!("{mixed}");
+            let ordered = {
+                let spread4 = picked(plain.clone(), "first");
+                Theme(Arc::new(ThemeStruct {
+                    fg: noted("second"),
+                    bg: noted("third"),
+                    ..(*spread4.0).clone()
+                }))
+            };
+            println!("{ordered}");
+            let first = Tally::new(1, "a");
+            let second = {
+                let spread5 = first.clone();
+                Tally::new(spread5.count(), renamed(first.clone(), "b"))
+            };
+            println!("{} {} {}", first.count(), second.count(), second.0.name);
             println!(
                 "{}",
                 compared(Arc::new(move |a: Option<Loose>, b: Option<Loose>| {
@@ -617,6 +660,111 @@ temper_core::impl_any_value_trait!(Stock, []);
 
 pub(crate) fn shape(x: Shape) -> Shape {
     x.clone()
+}
+
+#[derive(Clone)]
+struct ThemeStruct {
+    fg: Arc<String>,
+    bg: Arc<String>,
+    size: i32,
+    bold: bool,
+    note: Option<Arc<String>>,
+}
+
+#[derive(Clone)]
+pub(crate) struct Theme(Arc<ThemeStruct>);
+
+impl Theme {
+    pub fn new(
+        fg: impl ToArcString,
+        bg: impl ToArcString,
+        size: i32,
+        bold: bool,
+        note: Option<impl ToArcString>,
+    ) -> Theme {
+        let fg = fg.to_arc_string();
+        let bg = bg.to_arc_string();
+        let note = note.map(|x| x.to_arc_string());
+        Theme(Arc::new(ThemeStruct {
+            fg,
+            bg,
+            size,
+            bold,
+            note,
+        }))
+    }
+
+    pub fn weight(&self) -> Arc<String> {
+        if self.0.bold {
+            Arc::new("bold".to_string())
+        } else {
+            Arc::new("plain".to_string())
+        }
+    }
+
+    pub fn to_string(&self) -> Arc<String> {
+        Arc::new(format!(
+            "{}/{} {} {}{}",
+            self.0.fg,
+            self.0.bg,
+            self.0.size,
+            self.weight(),
+            {
+                let subject = self.0.note.clone();
+                subject.clone().unwrap_or_else(|| Arc::new(String::new()))
+            }
+        ))
+    }
+}
+
+impl std::fmt::Display for Theme {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.to_string())
+    }
+}
+
+temper_core::impl_any_value_trait!(Theme, []);
+
+pub(crate) fn picked(t: Theme, why: impl ToArcString) -> Theme {
+    let why = why.to_arc_string();
+    println!("{why}");
+    t.clone()
+}
+
+pub(crate) fn noted(s: impl ToArcString) -> Arc<String> {
+    let s = s.to_arc_string();
+    println!("{s}");
+    s.clone()
+}
+
+struct TallyStruct {
+    count: RwLock<i32>,
+    name: Arc<String>,
+}
+
+#[derive(Clone)]
+pub(crate) struct Tally(Arc<TallyStruct>);
+
+impl Tally {
+    pub fn new(count: i32, name: impl ToArcString) -> Tally {
+        let name = name.to_arc_string();
+        Tally(Arc::new(TallyStruct {
+            count: RwLock::new(count),
+            name,
+        }))
+    }
+
+    pub fn count(&self) -> i32 {
+        *self.0.count.read().unwrap()
+    }
+}
+
+temper_core::impl_any_value_trait!(Tally, []);
+
+pub(crate) fn renamed(t: Tally, name: impl ToArcString) -> Arc<String> {
+    let name = name.to_arc_string();
+    *t.0.count.write().unwrap() = t.count().wrapping_add(10);
+    name.clone()
 }
 
 pub(crate) fn compared(

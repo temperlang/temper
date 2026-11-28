@@ -67,3 +67,14 @@ here too, with a nullable side or not.
 ```log
 true true true
 ```
+
+A spread of `state`'s `@data` class, which Rust builds by its
+constructor, as its struct is private to `state`, and C++ copies.
+
+    let { Spot } = import("./state");
+    let moved = { ...new Spot(1, 2), y: 5 };
+    console.log("spot ${moved.x} ${moved.y}");
+
+```log
+spot 1 5
+```

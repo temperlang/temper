@@ -791,6 +791,7 @@ impl Reader {
             ("protected", Facts::PROTECTED),
             ("auto", Facts::AUTO),
             ("fun", Facts::FUN),
+            ("data", Facts::DATA),
         ] {
             if self.eat_word(word) {
                 marks.member = marks.member | fact;
@@ -1870,6 +1871,17 @@ impl Reader {
                         let value = self.expr()?;
                         self.expect(")")?;
                         return Ok(self.b.is_null(value));
+                    }
+                    "copy" => {
+                        self.next();
+                        self.expect("(")?;
+                        let read = self.expr()?;
+                        if self.b.program().nodes.kind(read) != Kind::GetField {
+                            return self.error("a spread's copy is a field read, as `copy(x.f)`");
+                        }
+                        self.expect(")")?;
+                        self.b.spread_copy(read);
+                        return Ok(read);
                     }
                     "eqNullable" => {
                         self.next();

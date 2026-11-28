@@ -17,17 +17,18 @@
 //!
 //! An object literal, `{ a: 1, b }`, is a constructor call with named
 //! arguments, `new void(\a 1, \b b)`, lowered by
-//! [`Settle::object_literal`], once its class is known.
+//! [`Settle::object_literal`], once its class is known. One with a spread,
+//! `{ ...old, a: 1 }`, is `new void(\... old, \a 1)`, which typing lowers.
 
 use crate::builtins::{Builtin, Function, Macro};
 use crate::core::{
-    CLASS_AUTO_EQ, CLASS_CONNECTED, CLASS_CONNECTED_LIST, CLASS_FUN, CLASS_INTERFACE, CLASS_SEALED,
-    FN_NO_BODY, FN_OUT_TYPE, LET_INIT, LET_VAR, MEMBER_CONNECTED, MEMBER_NO_PROPERTY,
+    CLASS_AUTO_EQ, CLASS_CONNECTED, CLASS_CONNECTED_LIST, CLASS_DATA, CLASS_FUN, CLASS_INTERFACE,
+    CLASS_SEALED, FN_NO_BODY, FN_OUT_TYPE, LET_INIT, LET_VAR, MEMBER_CONNECTED, MEMBER_NO_PROPERTY,
     MEMBER_OPERATOR_CMP, MEMBER_OPERATOR_EQ, MEMBER_PRIVATE, MEMBER_PROTECTED, MEMBER_PUBLIC,
     MEMBER_STATIC, ROLE_CONSTRUCTOR, ROLE_GETTER, ROLE_MASK, ROLE_METHOD, ROLE_PARAM, ROLE_SETTER,
     TYPE_PARAMS_SHIFT, class_parts, fn_parts, let_parts, member_fn, type_params,
 };
-use crate::library::{FunRule, Level, Message};
+use crate::library::{DataRule, FunRule, Level, Message};
 use crate::scope::{ScopeId, ScopeKind, SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
 use temper_syntax::ast::{Builtin as SyntaxBuiltin, Value};
@@ -108,8 +109,21 @@ impl Settle {
                     params.clear();
                 }
                 let first_member = children.len();
+                // A `@data` class's properties are public by default, as
+                // interface members are.
+                let data = self.data_classes.contains_key(&call);
+                let visibility = MEMBER_PUBLIC | MEMBER_PROTECTED | MEMBER_PRIVATE;
                 for param in params {
-                    children.extend(self.lower_member(param, 0, true));
+                    let Some(m) = self.lower_member(param, 0, true) else {
+                        continue;
+                    };
+                    let unmarked = self.lib.tree.data(m) & visibility == 0;
+                    let m = if data && unmarked {
+                        self.add_flags(m, MEMBER_PUBLIC)
+                    } else {
+                        m
+                    };
+                    children.push(m);
                 }
                 let statements = self.lib.tree.children(block).to_vec();
                 for statement in statements {
@@ -155,6 +169,11 @@ impl Settle {
                 children.push(self.lib.add(NodeKind::Let, span, data, &parts, call));
             }
         }
+        let imu = self.imu.remove(&call);
+        let data = self.data_classes.remove(&call).is_some() && {
+            let members = children[1 + type_params.len() + supers.len()..].to_vec();
+            self.check_data(call, *name, &members, interface, imu)
+        };
         let auto_eq = self.auto_eq.remove(&call);
         if let (Some(decorator), Some(_), true) = (auto_eq, block, type_params.is_empty()) {
             let members = children[1 + supers.len()..].to_vec();
@@ -203,7 +222,8 @@ impl Settle {
             | if is_fun { CLASS_FUN } else { 0 }
             | if connected { CLASS_CONNECTED } else { 0 }
             | if lists { CLASS_CONNECTED_LIST } else { 0 }
-            | if sealed { CLASS_SEALED } else { 0 };
+            | if sealed { CLASS_SEALED } else { 0 }
+            | if data { CLASS_DATA } else { 0 };
         self.rewrite(call, NodeKind::Class, data, &children);
         true
     }
@@ -812,6 +832,71 @@ impl Settle {
         self.lib.report(Level::Error, message, span);
     }
 
+    /// Whether a class marked `@data` keeps to its rules, reporting each
+    /// one broken (notes/typing.md, "`@data` classes"): it's a class, not
+    /// `@connected`; each constructor parameter is a property, public,
+    /// and no `var` if the class is `@imu`; and it declares no other
+    /// property (a field, getter, or setter, static or not) and no
+    /// constructor. Methods, static or not, are fine. Its defaults need
+    /// types, so typing checks them ([`Settle::check_data_defaults`]).
+    fn check_data(
+        &mut self,
+        call: NodeId,
+        name: NodeId,
+        members: &[NodeId],
+        interface: bool,
+        imu: bool,
+    ) -> bool {
+        let class = self.lib.names.get(self.lib.name(name).unwrap()).to_string();
+        let mut broken = Vec::new();
+        if interface {
+            broken.push((DataRule::Interface, name));
+        } else if self.connected.contains(&call) {
+            broken.push((DataRule::Connected, name));
+        }
+        for &m in members.iter().filter(|_| !interface) {
+            let tree = &self.lib.tree;
+            let data = tree.data(m);
+            let member = self.member_text(m).to_string();
+            let rule = match data & ROLE_MASK {
+                ROLE_METHOD => continue,
+                ROLE_PARAM if data & MEMBER_NO_PROPERTY != 0 => DataRule::NotProperty(member),
+                ROLE_PARAM if data & (MEMBER_PRIVATE | MEMBER_PROTECTED) != 0 => {
+                    DataRule::NotPublic(member)
+                }
+                ROLE_PARAM if imu && data & LET_VAR != 0 => DataRule::ImuVar(member),
+                ROLE_PARAM => continue,
+                _ if data & MEMBER_STATIC != 0 => DataRule::Member(format!("static {member}")),
+                ROLE_GETTER => DataRule::Member(format!("getter {member}")),
+                ROLE_SETTER => DataRule::Member(format!("setter {member}")),
+                ROLE_CONSTRUCTOR => DataRule::Member("a constructor".into()),
+                _ => DataRule::Member(format!("property {member}")),
+            };
+            broken.push((rule, tree.children(m)[0]));
+        }
+        let ok = broken.is_empty();
+        for (rule, at) in broken {
+            let span = self.lib.tree.span(at);
+            let message = Message::DataRule(class.clone(), rule);
+            self.lib.report(Level::Error, message, span);
+        }
+        ok
+    }
+
+    /// Reports each `@data` left on what isn't a class or interface, as a
+    /// `let` or a function, once expansion settles.
+    pub(crate) fn report_data_not_classes(&mut self) {
+        // `@imu` on what isn't a class matters no more either.
+        self.imu.clear();
+        let mut spans: Vec<_> = (self.data_classes.drain())
+            .map(|(_, decorator)| self.lib.tree.span(decorator))
+            .collect();
+        spans.sort_by_key(|span| span.start);
+        for span in spans {
+            self.lib.report(Level::Error, Message::DataNotClass, span);
+        }
+    }
+
     /// A member's or class's name.
     pub(crate) fn member_text(&self, decl: NodeId) -> &str {
         let name = self.lib.tree.children(decl)[0];
@@ -1293,8 +1378,9 @@ impl Settle {
     /// ([`Settle::place_literal`]); otherwise its class waits for the type
     /// its place wants, once typing knows that
     /// ([`Settle::decide_object_literal`]), while its values settle as
-    /// any others do. Returns whether the call became something else, a
-    /// block or an error.
+    /// any others do. A spread's class waits for typing too, which lowers
+    /// it ([`Settle::place_spread`]). Returns whether the call became
+    /// something else, a block or an error.
     pub(crate) fn object_literal(
         &mut self,
         call: NodeId,
@@ -1309,10 +1395,17 @@ impl Settle {
         if !is_void && !children[2..].iter().any(|&c| self.lib.symbol(c).is_some()) {
             return Ok(false);
         }
-        if self.literal_props(call).is_none() {
+        let Some(props) = self.literal_props(call) else {
             self.error(call, Message::MalformedSpecial("new".into()));
             return Ok(true);
+        };
+        if props.iter().skip(1).any(|&(name, _)| self.is_spread(name)) {
+            self.error(call, Message::SpreadNotFirst);
+            return Ok(true);
         }
+        // A spread's class comes from its value's type, so it waits for
+        // typing too ([`Settle::decide_spread`]).
+        let spread = props.first().is_some_and(|&(name, _)| self.is_spread(name));
         let mut puns = false;
         for i in (3..children.len()).step_by(2) {
             let value = children[i];
@@ -1330,7 +1423,7 @@ impl Settle {
         if puns {
             self.set_children(call, &children);
         }
-        if is_void {
+        if is_void || spread {
             self.object_literals.insert(call, scope);
             return Ok(false);
         }
@@ -1345,6 +1438,11 @@ impl Settle {
             self.place_literal(call, target, class),
             Placed::InPlace
         ))
+    }
+
+    /// Whether an object literal's property name is a spread's, `\...`.
+    pub(crate) fn is_spread(&self, name: NameId) -> bool {
+        self.lib.names.get(name) == "..."
     }
 
     /// An object literal's names and values, as `new C(\a 1, \b 2)` gives

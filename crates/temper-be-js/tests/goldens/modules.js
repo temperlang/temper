@@ -3,6 +3,7 @@ import { Ratio, ratioOf, share } from "./core.js";
 import { base, bump, calls, intDoubled, twice } from "./helpers.js";
 import { greet } from "./helpers/deep.js";
 import { describe } from "./machine.js";
+import { Spot } from "./state.js";
 
 /**
  * @param {number} n
@@ -53,3 +54,11 @@ let t$1;
   t$1 = right == null ? false : left2.eq(right);
 }
 console.log(`${half.eq(new Ratio(2, 4))} ${t$0} ${!t$1}`);
+/** @type {Spot} */
+let t$2;
+{
+  const spread = new Spot(1, 2);
+  t$2 = new Spot(spread.x, 5);
+}
+const moved = t$2;
+console.log(`spot ${moved.x} ${moved.y}`);

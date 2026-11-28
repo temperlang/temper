@@ -108,6 +108,8 @@ pub enum Unary {
     Not,
     Neg,
     BitNot,
+    /// `*p`, the object a pointer points to.
+    Deref,
 }
 
 impl Unary {
@@ -116,6 +118,7 @@ impl Unary {
             Unary::Not => "!",
             Unary::Neg => "-",
             Unary::BitNot => "~",
+            Unary::Deref => "*",
         }
     }
 }

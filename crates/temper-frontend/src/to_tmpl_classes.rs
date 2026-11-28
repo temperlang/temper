@@ -70,6 +70,9 @@ impl Translator<'_> {
             if self.data(node) & crate::core::CLASS_FUN != 0 {
                 self.b.add_facts(decl, Facts::FUN);
             }
+            if self.data(node) & crate::core::CLASS_DATA != 0 {
+                self.b.add_facts(decl, Facts::DATA);
+            }
             self.keep_facts(decl, node);
             self.decl_spans(decl, node);
             self.classes.insert(node, decl);
@@ -1219,7 +1222,13 @@ impl Translator<'_> {
         let rest = self.omit_rest_of(ctor, None, &type_args, args.len(), at)?;
         let mut values = Vec::new();
         for &a in args {
-            values.push(self.expr(a)?);
+            let value = self.expr(a)?;
+            if self.s.typing.spread_copies.contains(&a)
+                && matches!(self.b.program().nodes.get(value), Node::GetField { .. })
+            {
+                self.b.spread_copy(value);
+            }
+            values.push(value);
         }
         let mut values = self.fit_args_with(ctor, None, &type_args, values);
         values.extend(rest);

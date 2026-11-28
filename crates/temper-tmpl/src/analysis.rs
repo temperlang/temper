@@ -19,11 +19,15 @@
 //! are assigned, which some targets keep in cells ([`assigned_captures`]),
 //! and the groups of local functions that use each other or themselves
 //! ([`function_groups`]). And the defaults a function's body starts with
-//! ([`defaults`]).
+//! ([`defaults`]), and the classes a spread may copy with a target's own
+//! copy form ([`copyable_classes`]), what a spread's argument copies
+//! ([`spread_copy_of`]), and the fields its arguments set
+//! ([`spread_fields`]).
 
 use crate::decls::{DeclKind, Facts};
 use crate::ids::TypeId;
 use crate::ids::{DeclId, NodeId};
+use crate::nodes::Flags;
 use crate::qname::{QNames, is_external};
 use crate::schema::Node;
 use crate::types::{Scalar, TypeData};
@@ -1211,4 +1215,96 @@ pub fn most_sets(p: &Program, id: NodeId, field: DeclId) -> usize {
             count
         }
     }
+}
+
+/// The program's own constructors' parameters, in order, by the
+/// constructor: what a `New`'s arguments are passed to.
+pub fn constructor_params(p: &Program) -> HashMap<DeclId, Vec<DeclId>> {
+    let mut found = HashMap::new();
+    for item in p.modules.iter().flat_map(|m| m.all_items()) {
+        let Node::Class { members, .. } = p.nodes.get(item) else {
+            continue;
+        };
+        for &m in p.nodes.list(members) {
+            if let Node::Method { decl, params, .. } = p.nodes.get(m) {
+                if p.decls.get(decl).kind == DeclKind::Constructor {
+                    found.insert(decl, param_decls(p, params));
+                }
+            }
+        }
+    }
+    found
+}
+
+fn param_decls(p: &Program, params: crate::nodes::Kids) -> Vec<DeclId> {
+    (p.nodes.list(params).iter())
+        .filter_map(|&n| match p.nodes.get(n) {
+            Node::Param { decl } => Some(decl),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The program's own classes that a spread, `{ ...old, a: e }`, may copy
+/// with a target's own copy form, skipping the constructor, by their
+/// declarations (notes/tmpl/nodes.md, "Spreads"): the `data` ones, whose
+/// constructor only stores its parameters, with no `var` field, so the
+/// given values, which run first, can't change what a copy then reads,
+/// and each constructor parameter has its field ([`spread_fields`]).
+pub fn copyable_classes(p: &Program) -> HashSet<DeclId> {
+    let mut found = HashSet::new();
+    for item in p.modules.iter().flat_map(|m| m.all_items()) {
+        if let Node::Class { decl, members } = p.nodes.get(item) {
+            let members = p.nodes.list(members);
+            let unfit = |&m: &NodeId| match p.nodes.get(m) {
+                Node::Field { decl } => p.decls.get(decl).facts.contains(Facts::VAR),
+                Node::Method { decl, .. } if p.decls.get(decl).kind == DeclKind::Constructor => {
+                    spread_fields(p, members, decl).is_none()
+                }
+                _ => false,
+            };
+            if p.decls.get(decl).facts.contains(Facts::DATA) && !members.iter().any(unfit) {
+                found.insert(decl);
+            }
+        }
+    }
+    found
+}
+
+/// What a spread's copy, `copy(spread#1.a)`, as it is or made nullable,
+/// reads from: the local holding `old` (rule C4).
+pub fn spread_copy_of(p: &Program, arg: NodeId) -> Option<NodeId> {
+    let read = match p.nodes.get(arg) {
+        Node::AsNullable { value } => value,
+        _ => arg,
+    };
+    match p.nodes.get(read) {
+        Node::GetField { object, .. } if p.nodes.flags(read).contains(Flags::SPREAD_COPY) => {
+            Some(object)
+        }
+        _ => None,
+    }
+}
+
+/// The fields a copyable class's constructor `ctor` sets, by its
+/// parameters, each the field of its name, as a `data` class's
+/// constructor only stores them; `members` are the class's. None if a
+/// parameter has no such field.
+pub fn spread_fields(p: &Program, members: &[NodeId], ctor: DeclId) -> Option<Vec<DeclId>> {
+    let params = members.iter().find_map(|&m| match p.nodes.get(m) {
+        Node::Method { decl, params, .. } if decl == ctor => Some(p.nodes.list(params)),
+        _ => None,
+    })?;
+    let field_named = |name: &str| {
+        members.iter().find_map(|&m| match p.nodes.get(m) {
+            Node::Field { decl } if p.name(decl) == name => Some(decl),
+            _ => None,
+        })
+    };
+    (params.iter())
+        .map(|&n| match p.nodes.get(n) {
+            Node::Param { decl } => field_named(p.name(decl)),
+            _ => None,
+        })
+        .collect()
 }

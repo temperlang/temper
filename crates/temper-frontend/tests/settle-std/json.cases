@@ -60,6 +60,15 @@ log {"i":null}
 log {"i":5}
 log missing i bubbles
 
+=== a @data class's spread copy encodes as any object does
+let { JsonTextProducer } = import("std/json");
+@json @data class Pt(public x: Int, public y: Int) {}
+let p = new JsonTextProducer();
+Pt.jsonAdapter().encodeToJson({ ...new Pt(1, 2), y: 5 }, p);
+console.log(p.toJsonString() orelse "bad");
+--- settled
+log {"x":1,"y":5}
+
 === a list of nullable values
 let { NullInterchangeContext, OrNullJsonAdapter, booleanJsonAdapter, listJsonAdapter, parseJson } = import("std/json");
 let a = List.jsonAdapter(new OrNullJsonAdapter(Boolean.jsonAdapter()));

@@ -28,7 +28,10 @@
 //! method an interface gives a class is called by its trait
 //! (`CTrait::a(&d)`), where Kotlin also gives the class a private method
 //! that does; the constructor builds its instance in one expression where
-//! it can; and what Kotlin always writes but a type that isn't exported
+//! it can; a spread, `{ ...old, size: 20 }`, of a `@data` class with no
+//! `var` property (`copyable_classes`) is a struct update,
+//! `Theme(Arc::new(ThemeStruct { size: 20, ..(*spread.0).clone() }))`,
+//! its struct then `Clone` (Kotlin Temper has no spreads); and what Kotlin always writes but a type that isn't exported
 //! may not use (`new`, `clone_boxed`) is `#[allow(dead_code)]`, where
 //! Kotlin's output allows every warning.
 
@@ -36,7 +39,9 @@ use super::{Params, R, Translator, Want, not_yet};
 use crate::names::static_name;
 use crate::tree::{Bin, Block, Expr, Item, Member, Stmt, Unary};
 use std::collections::{HashMap, HashSet};
-use temper_tmpl::analysis::{ancestors, home, is_plain_to_string, nominal_decl, walk};
+use temper_tmpl::analysis::{
+    ancestors, home, is_plain_to_string, nominal_decl, spread_copy_of, spread_fields, walk,
+};
 use temper_tmpl::naming::snake_case;
 use temper_tmpl::qname::{is_external, library_of};
 use temper_tmpl::{DeclId, DeclKind, Facts, Kids, Module, Node, NodeId, Program, TypeId};
@@ -196,7 +201,8 @@ impl<'a> Translator<'a> {
     /// the public fields of an exported class, or of any class where the
     /// library has host code, which may call them (`hidden.i()`), and a `var`'s getter
     /// wherever it's read, which reads it without holding its lock past
-    /// the read. And which classes it constructs, which interfaces'
+    /// the read. And which classes it constructs, or copies by a spread's
+    /// struct update ([`Translator::struct_update`]), which interfaces'
     /// handles it makes, and which interfaces' default methods use
     /// `clone_boxed`: Kotlin's output always has `new` and `clone_boxed`,
     /// which in a type that isn't exported may go unused, and so are
@@ -217,14 +223,13 @@ impl<'a> Translator<'a> {
                 }
             });
         }
+        let mut news = Vec::new();
         for &root in &roots {
             walk(p, root, &mut |id| match p.nodes.get(id) {
                 Node::GetField { field, .. } if self.facts(field).contains(Facts::VAR) => {
                     self.getters.insert(field);
                 }
-                Node::New { ctor, .. } => {
-                    self.constructed.insert(p.decls.get(ctor).owner);
-                }
+                Node::New { ctor, args, .. } => news.push((ctor, args)),
                 Node::Upcast { .. } if !receivers.contains(&id) => {
                     if let Some(to) = nominal_decl(p, p.nodes.ty(id)) {
                         self.wrapped.insert(to);
@@ -232,6 +237,14 @@ impl<'a> Translator<'a> {
                 }
                 _ => {}
             });
+        }
+        for (ctor, args) in news {
+            let class = p.decls.get(ctor).owner;
+            if self.spread_base(ctor, p.nodes.list(args)).is_some() {
+                self.updated.insert(class);
+            } else {
+                self.constructed.insert(class);
+            }
         }
         // Interfaces whose default methods need `this` as a value, by
         // `clone_boxed`.
@@ -594,9 +607,11 @@ impl<'a> Translator<'a> {
         }
         members.extend(accessors);
         fields.extend(phantoms.into_iter().map(|(f, t)| ("", f, t)));
+        // A spread's struct update clones it.
+        let cloned = self.updated.contains(&class);
         let mut items = vec![
             Item::Struct {
-                attrs: Vec::new(),
+                attrs: Vec::from_iter(cloned.then(|| "#[derive(Clone)]".into())),
                 vis: "",
                 name: format!("{name}Struct{gdecl}"),
                 fields,
@@ -1623,6 +1638,67 @@ impl<'a> Translator<'a> {
         } else {
             e
         })
+    }
+
+    /// The local a spread, `{ ...old, a: e }`, copies from, where it's a
+    /// struct update ([`Translator::struct_update`]): a spread
+    /// (`copy(spread#1.b)` among its arguments) of a class of this module,
+    /// whose struct's fields are visible here, that `copyable_classes`
+    /// allows, each given value of its field's type (not so for a generic
+    /// field's `T`, given an `Int`). A `data` class's fields are typed as
+    /// its parameters, so a given value needs no conversion.
+    pub(crate) fn spread_base(&self, ctor: DeclId, args: &[NodeId]) -> Option<NodeId> {
+        let p = self.p;
+        let class = p.decls.get(ctor).owner;
+        if !self.copyable.contains(&class) || home(p, class) != Some(self.here) {
+            return None;
+        }
+        let mut base = None;
+        for (&a, field) in args.iter().zip(self.spread_fields(class, ctor)?) {
+            match spread_copy_of(p, a) {
+                Some(old) => base = Some(old),
+                None if p.nodes.ty(a) == p.decls.get(field).ty => {}
+                None => return None,
+            }
+        }
+        base
+    }
+
+    /// A copyable class's fields, by its constructor's parameters.
+    fn spread_fields(&self, class: DeclId, ctor: DeclId) -> Option<Vec<DeclId>> {
+        spread_fields(self.p, self.member_nodes(class), ctor)
+    }
+
+    /// A spread of a copyable class ([`Translator::spread_base`]) as a
+    /// struct update, which skips the constructor, as a `@data` class's
+    /// only stores its parameters: `C(Arc::new(CStruct { a: e,
+    /// ..(*spread.0).clone() }))`.
+    /// Rust runs the given values in order, then the base, a local that
+    /// already holds `old`, whose fields, none of them `var`, the values
+    /// can't change: the lowering's order.
+    pub(crate) fn struct_update(&mut self, ctor: DeclId, args: &[NodeId], base: NodeId) -> R<Expr> {
+        let p = self.p;
+        let class = p.decls.get(ctor).owner;
+        let Some(fields) = self.spread_fields(class, ctor) else {
+            return not_yet("a spread's copy of a class without a field per parameter");
+        };
+        let mut lits = Vec::new();
+        for (&a, field) in args.iter().zip(fields) {
+            if spread_copy_of(p, a).is_some() {
+                continue;
+            }
+            let name = self.name(field);
+            lits.push(match self.expr(a, Want::Owned)? {
+                Expr::Path(x) if x == name => (name, None),
+                e => (name, Some(e)),
+            });
+        }
+        let old = self.expr(base, Want::Borrowed)?.field("0");
+        let old = Expr::unary(Unary::Deref, old).method("clone", Vec::new());
+        lits.push(("..".into(), Some(old)));
+        let path = self.top_path(class)?;
+        let made = Expr::Struct(format!("{path}Struct"), lits);
+        Ok(Expr::path(&path).call(vec![self.arc(made)]))
     }
 
     /// Writes an instance field: of a class of this module under its

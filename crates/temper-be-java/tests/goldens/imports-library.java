@@ -5,6 +5,7 @@ import modules.ModulesGlobal;
 import modules.core.CoreGlobal;
 import modules.core.Ratio;
 import modules.helpers.HelpersGlobal;
+import modules.state.Spot;
 import renamed.Builtins;
 import renamed.Checked;
 import renamed.RenamedGlobal;
@@ -33,5 +34,8 @@ public final class ImportsLibraryGlobal {
         Builtins b = new Builtins(4);
         console.log("builtins " + b.hash + " " + b.get(1) + " " + b.set(3) + " " + b.map(5) + " " + b.format() + " " + b.getInt() + " " + b.later());
         console.log(b.print());
+        Spot spread = new Spot(3, 4);
+        Spot far = new Spot(9, spread.y);
+        console.log("spot far " + far.x + " " + far.y);
     }
 }

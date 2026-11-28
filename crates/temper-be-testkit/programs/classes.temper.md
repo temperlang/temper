@@ -150,6 +150,60 @@ true false
 2 2 3 3
 ```
 
+## Spreads
+
+`{ ...old, a: e }` copies a `@data` object with some properties changed:
+the constructor runs, each property not given read from `old`, which
+runs first, then the given values, in the order written. A `@data`
+class's properties are public without saying so.
+
+    @imu @data
+    class Theme(
+      fg: String,
+      bg: String,
+      size: Int,
+      bold: Boolean,
+      note: String? = null,
+    ) {
+      public weight(): String { if (bold) { "bold" } else { "plain" } }
+      public toString(): String { "${fg}/${bg} ${size} ${weight()}${note ?? ""}" }
+    }
+    let plain: Theme = { fg: "black", bg: "white", size: 12, bold: false };
+    let loud = { ...plain, size: 20, bold: true, note: "!" };
+    let dark = { ...loud, fg: plain.bg, bg: plain.fg };
+    console.log("${plain} | ${loud} | ${dark}");
+    let picked(t: Theme, why: String): Theme { console.log(why); t }
+    let noted(s: String): String { console.log(s); s }
+    let mixed = { ...picked(dark, "old"), size: 9, fg: noted("red") };
+    console.log(mixed.toString());
+    let ordered = { ...picked(plain, "first"), fg: noted("second"), bg: noted("third") };
+    console.log(ordered.toString());
+
+A `@data` class that isn't `@imu` may have `var` properties. Its copies
+read `old`'s properties in the constructor's order, among the given
+values, so `count` here is read before `renamed` changes it; a target
+with its own copy form, which would read it after, calls the
+constructor instead:
+
+    @data
+    class Tally(var count: Int, public name: String) {}
+    let first = new Tally(1, "a");
+    let renamed(t: Tally, name: String): String { t.count = t.count + 10; name }
+    let second = { ...first, name: renamed(first, "b") };
+    console.log("${first.count} ${second.count} ${second.name}");
+
+```log
+black/white 12 plain | black/white 20 bold! | white/black 20 bold!
+old
+red
+red/black 9 bold!
+first
+second
+third
+second/third 12 plain
+11 1 b
+```
+
 ## Equality, every way round
 
 A table of `==` and `!=` on `Loose`, whose `@operator("==")` method

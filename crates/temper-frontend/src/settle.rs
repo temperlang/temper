@@ -163,6 +163,8 @@ impl Settle {
             auto_eq: HashMap::new(),
             fun_interfaces: HashSet::new(),
             sealed: HashSet::new(),
+            data_classes: HashMap::new(),
+            imu: HashSet::new(),
             json_decorated: HashSet::new(),
             json: crate::json::JsonState::default(),
             static_extension_marks: HashMap::new(),
@@ -230,6 +232,7 @@ impl Settle {
         let mut typed = false;
         if self.run() {
             self.drop_dead_branches();
+            self.report_data_not_classes();
             self.queue_typing();
             if self.run() {
                 self.check_types();
@@ -317,6 +320,12 @@ pub(crate) struct Settle {
     pub(crate) fun_interfaces: HashSet<NodeId>,
     /// Declarations marked `sealed`, until they're interfaces.
     pub(crate) sealed: HashSet<NodeId>,
+    /// Declarations marked `@data`, with the decorator, until they're
+    /// classes; any left once expansion settles aren't classes.
+    pub(crate) data_classes: HashMap<NodeId, NodeId>,
+    /// Declarations marked `@imu`, until they're classes, where only
+    /// `@data` checks it (a `@data` class's `var`).
+    pub(crate) imu: HashSet<NodeId>,
     /// Declarations marked `@json`, until they're classes, which get
     /// members to encode and decode JSON ([`crate::json`]).
     pub(crate) json_decorated: HashSet<NodeId>,

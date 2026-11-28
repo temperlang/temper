@@ -242,7 +242,7 @@ impl Settle {
     }
 
     /// The class or interface declaring a member.
-    fn member_owner(&self, m: NodeId) -> Option<NodeId> {
+    pub(super) fn member_owner(&self, m: NodeId) -> Option<NodeId> {
         let b = self.scopes.resolved(*self.lib.tree.children(m).first()?)?;
         Some(self.scopes.get(self.scopes.symbol(b).owner).node)
     }

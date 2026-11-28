@@ -39,6 +39,28 @@ function Parts.constructor(this, count)
   this.count = count
 end
 
+---@class modules.state.Spot
+---@field x integer
+---@field y integer
+
+---@class modules.state.Spot.type: temper.Type
+---@operator call: modules.state.Spot
+local Spot = temper.type("modules.state.Spot")
+
+---@param this modules.state.Spot
+---@param x integer
+---@param y integer
+function Spot.constructor(this, x, y)
+  this.x = x
+  this.y = y
+end
+
 local firstId = 1
 
-return { State = State, Engine = Engine, Parts = Parts, firstId = firstId }
+return {
+  State = State,
+  Engine = Engine,
+  Parts = Parts,
+  firstId = firstId,
+  Spot = Spot,
+}
