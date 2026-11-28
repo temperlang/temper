@@ -4,7 +4,7 @@
 - [Auto operator implementation](#auto-operator-implementation)
 - [Rust resumes every block awaiting a promise](#rust-resumes-every-block-awaiting-a-promise)
 - [Decorators for immutable types](#decorators-for-immutable-types)
-- [🚨Breaking change: type parameter variance now requires `@`.](#breaking-change-type-parameter-variance-now-requires-)
+- [🚨Breaking change: type parameter variance removed](#breaking-change-type-parameter-variance-removed)
 - [🚨Breaking change: Multiline string syntax (yes, again)](#breaking-change-multiline-string-syntax-yes-again)
 - [🆕 Bitwise operators](#-bitwise-operators)
 - [🚨Breaking change: Details of rules for `<` ambiguity have changed](#breaking-change-details-of-rules-for--ambiguity-have-changed)
