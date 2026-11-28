@@ -802,7 +802,7 @@ impl<'a> Translator<'a> {
         let host = snake_case(p.name(decl));
         let callee = Expr::Attr(Box::new(Expr::Name(CONNECTED.into())), host);
         stmts.push(Stmt::Return(Some(Expr::Call(Box::new(callee), args))));
-        if let Stmt::Def { body, .. } = &mut def {
+        if let Stmt::Def { body, .. } = def.uncommented_mut() {
             *body = stmts;
         }
         Ok(def)
@@ -903,13 +903,17 @@ impl<'a> Translator<'a> {
             }
             None => stmts.push(Stmt::Expr(Expr::Ellipsis)),
         }
-        Ok(Stmt::Def {
+        let def = Stmt::Def {
             decorators,
             name,
             params: ps,
             positional,
             result,
             body: stmts,
+        };
+        Ok(match lone_result_type_var(self.p, decl) {
+            Some(rule) => tree::commented(def, rule),
+            None => def,
         })
     }
 
@@ -1093,7 +1097,7 @@ impl<'a> Translator<'a> {
     ) -> R<Stmt> {
         let (nonlocal, global) = self.captures_assigned(decl, body);
         let mut def = self.def(id, decl, params, Some(body), name, Vec::new())?;
-        if let Stmt::Def { body, .. } = &mut def {
+        if let Stmt::Def { body, .. } = def.uncommented_mut() {
             if !nonlocal.is_empty() {
                 body.insert(0, Stmt::Nonlocal(nonlocal));
             }
@@ -1143,7 +1147,7 @@ impl<'a> Translator<'a> {
             positional,
             body: stmts,
             ..
-        } = &mut def
+        } = def.uncommented_mut()
         {
             decorators.push(adapt);
             ps.insert(
@@ -2777,34 +2781,61 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
     })
 }
 
+/// How many times a type names the type parameter whose type is `param`.
+fn times_named(p: &Program, ty: TypeId, param: TypeId) -> usize {
+    if ty == param {
+        return 1;
+    }
+    if !p.types.contains(ty) {
+        return 0;
+    }
+    match p.types.get(ty) {
+        TypeData::Nullable(t) => times_named(p, t, param),
+        // `NoReturn`, which names none.
+        TypeData::Never(_) => 0,
+        TypeData::Nominal { args, .. } => p
+            .types
+            .list(args)
+            .iter()
+            .map(|&a| times_named(p, a, param))
+            .sum(),
+        TypeData::Function { .. } => p.types.signature(ty).map_or(0, |sig| {
+            (sig.params.iter().chain([&sig.result]))
+                .map(|&t| times_named(p, t, param))
+                .sum()
+        }),
+        TypeData::Scalar(_) | TypeData::TypeParam { .. } => 0,
+    }
+}
+
 /// Whether a function's signature names the type parameter whose type
 /// is `param` only once, as one parameter's whole type, `T` or `T?`.
 fn only_as_a_parameter(p: &Program, decl: DeclId, param: TypeId) -> bool {
-    fn count(p: &Program, ty: TypeId, param: TypeId) -> usize {
-        if ty == param {
-            return 1;
-        }
-        if !p.types.contains(ty) {
-            return 0;
-        }
-        match p.types.get(ty) {
-            TypeData::Nullable(t) => count(p, t, param),
-            // `NoReturn`, which names none.
-            TypeData::Never(_) => 0,
-            TypeData::Nominal { args, .. } => {
-                p.types.list(args).iter().map(|&a| count(p, a, param)).sum()
-            }
-            TypeData::Function { .. } => p.types.signature(ty).map_or(0, |sig| {
-                (sig.params.iter().chain([&sig.result]))
-                    .map(|&t| count(p, t, param))
-                    .sum()
-            }),
-            TypeData::Scalar(_) | TypeData::TypeParam { .. } => 0,
-        }
-    }
     let Some(sig) = p.signature(decl) else {
         return false;
     };
     let bare = (sig.params.iter()).any(|&t| p.types.non_null(t) == param);
-    bare && count(p, p.decls.get(decl).ty, param) == 1
+    bare && times_named(p, p.decls.get(decl).ty, param) == 1
+}
+
+/// The ignore comment a function's `def` needs for an own type parameter
+/// that its signature names only once, in its result (`List<B>`, `B?`):
+/// a `TypeVar` all the same, which a call's expected type solves, as its
+/// bound wouldn't fit a call's explicit type argument. pyright's strict
+/// `reportInvalidTypeVarUse` reports it, and mypy's `type-var` too where
+/// the result is just `B`.
+fn lone_result_type_var(p: &Program, decl: DeclId) -> Option<&'static str> {
+    let sig = p.signature(decl)?;
+    let lone: Vec<TypeId> = (p.decls.type_params(decl).iter())
+        .map(|&tp| p.decls.get(tp).ty)
+        .filter(|&t| {
+            times_named(p, sig.result, t) == 1
+                && sig.params.iter().all(|&a| times_named(p, a, t) == 0)
+        })
+        .collect();
+    match lone.first() {
+        None => None,
+        _ if lone.contains(&sig.result) => Some("type: ignore[type-var]"),
+        _ => Some("pyright: ignore[reportInvalidTypeVarUse]"),
+    }
 }

@@ -11,7 +11,7 @@
 use crate::builtins::{Builtin, Function, Macro};
 use crate::core::{
     FN_LOOP_BODY, FN_NO_BODY, FN_OUT_TYPE, FN_SUPERS_SHIFT, LET_INIT, LET_TYPE, LET_VAR, LOOP_EACH,
-    LOOP_NEXT, MEMBER_CONNECTED, ROLE_TYPE_PARAM, TYPE_PARAM_VARIANT, TYPE_PARAMS_SHIFT,
+    LOOP_NEXT, MEMBER_CONNECTED, ROLE_TYPE_PARAM, TYPE_PARAMS_SHIFT,
 };
 use crate::library::{Level, Message};
 use crate::scope::{Lookup, ScopeId, ScopeKind, SymbolKind};
@@ -1339,14 +1339,8 @@ impl Settle {
 
     /// A type parameter, as `T`, `T extends Bound` or with decorators,
     /// becomes a `Let` whose type is its bound. Type parameters are
-    /// invariant, but `@out` and `@in` are kept as
-    /// [`TYPE_PARAM_VARIANT`], so checks can leave alone what only
-    /// variance accepts; other decorators are ignored.
+    /// invariant, and decorators on them are ignored.
     pub(crate) fn lower_type_param(&mut self, node: NodeId) -> Option<NodeId> {
-        self.lower_type_param_marked(node, 0)
-    }
-
-    fn lower_type_param_marked(&mut self, node: NodeId, flags: u32) -> Option<NodeId> {
         let children = self.lib.tree.children(node).to_vec();
         let span = self.lib.tree.span(node);
         let (name, bound) = match (self.lib.tree.kind(node), &children[..]) {
@@ -1362,16 +1356,13 @@ impl Settle {
                     _ => return None,
                 }
             }
-            (NodeKind::Call, [callee, decorator, target])
+            (NodeKind::Call, [callee, _, target])
                 if self
                     .lib
                     .name(*callee)
                     .is_some_and(|n| self.lib.names.get(n) == "@") =>
             {
-                let variant = (self.lib.name(*decorator))
-                    .is_some_and(|n| matches!(self.lib.names.get(n), "out" | "in"));
-                let flags = flags | if variant { TYPE_PARAM_VARIANT } else { 0 };
-                return self.lower_type_param_marked(*target, flags);
+                return self.lower_type_param(*target);
             }
             _ => return None,
         };
@@ -1382,7 +1373,7 @@ impl Settle {
         let left = self
             .lib
             .add_name(NodeKind::LeftName, text, self.lib.tree.span(name), name);
-        Some(self.make_let(left, bound, None, ROLE_TYPE_PARAM | flags, span, node))
+        Some(self.make_let(left, bound, None, ROLE_TYPE_PARAM, span, node))
     }
 
     /// A grammar `Fun`, as a block argument `{ (x: Int): Int => body }`,

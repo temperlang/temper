@@ -3,9 +3,13 @@
 //!
 //! **Nullables,** as Kotlin's: a class's or interface's `shared_ptr` may
 //! be null itself, and another type `T?` is the runtime's
-//! `core::NullableParam<T>`. A null check is `x == nullptr` (which
+//! `core::NullableParam<T>`; a type parameter's `T?` is the runtime's
+//! `core::Nullable<T>`, whichever of these `T` takes (Kotlin's is always
+//! a `NullableParam`), so a generic call's `Pair<A, B?>` is the type its
+//! caller names. A null check is `x == nullptr` (which
 //! `NullableParam` defines too), a value known not to be null is `x.value`
-//! (or the pointer itself), and `==` with a side that may be null is
+//! (the pointer itself, or a `Nullable`'s `core::value_of<T>(x)`), and
+//! `==` with a side that may be null is
 //! `NullableParam`'s `==`, which compares as Temper's does, where the
 //! type's own `==` is C++'s. `as` from `T?` checks, bubbling on null
 //! (`core::not_null`, or `checked_cast` for a class).
@@ -618,12 +622,16 @@ impl<'a> Translator<'a> {
             }
             TypeData::Function { .. } => self.function_type(ty)?,
             // A class's `shared_ptr` may be null itself; another type is
-            // the runtime's `NullableParam`, as Kotlin's, a type
-            // parameter's too, whatever it's bound to.
+            // the runtime's `NullableParam`, as Kotlin's; a type
+            // parameter's is the runtime's `Nullable`, which picks the
+            // one of these its type argument takes, so a generic call's
+            // `P<A, B?>` is the type its caller names.
             TypeData::Nullable(inner) => {
                 let t = self.ty(inner)?;
                 if t.starts_with("std::shared_ptr<") {
                     t
+                } else if matches!(self.p.types.get(inner), TypeData::TypeParam { .. }) {
+                    format!("{CORE}::Nullable<{t}>")
                 } else {
                     format!("{CORE}::NullableParam<{t}>")
                 }
@@ -2400,9 +2408,22 @@ impl<'a> Translator<'a> {
     /// `value`, unless `ty` is nullable too; a pointer as it is.
     fn coalesced(&mut self, left: NodeId, ty: TypeId) -> R<Expr> {
         let e = self.expr(left)?;
-        let pointer = self.ty(ty)?.starts_with("std::shared_ptr<");
-        Ok(if pointer || self.p.types.is_nullable(ty) {
+        if self.p.types.is_nullable(ty) {
+            return Ok(e);
+        }
+        self.value_of(e, ty)
+    }
+
+    /// A nullable known not to be null, as `ty`, its type without `?`: a
+    /// pointer as it is, a `NullableParam`'s `value`, and a type
+    /// parameter's `Nullable` by the runtime's `value_of`, which knows
+    /// which it is.
+    fn value_of(&mut self, e: Expr, ty: TypeId) -> R<Expr> {
+        let t = self.ty(ty)?;
+        Ok(if t.starts_with("std::shared_ptr<") {
             e
+        } else if matches!(self.p.types.get(ty), TypeData::TypeParam { .. }) {
+            self.core(&format!("value_of<{t}>")).call(vec![e])
         } else {
             Expr::Member(Box::new(e), "value".into())
         })
@@ -2999,13 +3020,8 @@ impl<'a> Translator<'a> {
             Node::Null {} => Expr::name("nullptr"),
             Node::IsNull { value } => Expr::bin(Bin::Eq, self.expr(value)?, Expr::name("nullptr")),
             Node::NonNull { value } => {
-                let pointer = self.ty(p.nodes.ty(id))?.starts_with("std::shared_ptr<");
                 let value = self.expr(value)?;
-                if pointer {
-                    value
-                } else {
-                    Expr::Member(Box::new(value), "value".into())
-                }
+                self.value_of(value, p.nodes.ty(id))?
             }
             // `NullableParam` and `shared_ptr` take their values as they are.
             Node::AsNullable { value } => self.expr(value)?,
@@ -3053,7 +3069,8 @@ impl<'a> Translator<'a> {
     /// which compares as `EqNullable` does, where the type's own `==` is
     /// C++'s (a side known not to be null as its value, of its type, so
     /// the overload is clear); else as Kotlin's, `a == nullptr ? b ==
-    /// nullptr : b != nullptr && eq(a.value, b.value)`, each side once.
+    /// nullptr : b != nullptr && eq(a.value, b.value)`, each side once
+    /// (a pointer's value as it is).
     fn eq_nullable(&mut self, op: temper_tmpl::ops::Op, left: NodeId, right: NodeId) -> R<Expr> {
         let p = self.p;
         let Some(spelling) = ops::spelling(op) else {
@@ -3100,7 +3117,8 @@ impl<'a> Translator<'a> {
         if !matches!(b, Expr::Name(_)) {
             b = self.temporary(right, b)?;
         }
-        let value = |e: &Expr| Expr::Member(Box::new(e.clone()), "value".into());
+        let a_value = self.value_of(a.clone(), p.types.non_null(p.nodes.ty(left)))?;
+        let b_value = self.value_of(b.clone(), p.types.non_null(p.nodes.ty(right)))?;
         let null = Expr::name("nullptr");
         Ok(Expr::Cond {
             cond: Box::new(Expr::bin(Bin::Eq, a.clone(), null.clone())),
@@ -3108,7 +3126,7 @@ impl<'a> Translator<'a> {
             els: Box::new(Expr::bin(
                 Bin::And,
                 Expr::bin(Bin::Ne, b.clone(), null),
-                self.core(f).call(vec![value(&a), value(&b)]),
+                self.core(f).call(vec![a_value, b_value]),
             )),
         })
     }

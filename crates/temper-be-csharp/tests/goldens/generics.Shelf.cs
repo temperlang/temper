@@ -33,6 +33,7 @@ public class Shelf<T>
     }
 
     public int Tally<TName>(int extra)
+        where TName : Named
     {
         return this.items.Count + extra;
     }

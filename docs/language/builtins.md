@@ -2342,11 +2342,6 @@ For example:
 ### `@imu` decorator
 Marker for types that must be deeply immutable.
 
-### `@in` deprecated variance notation
-`@in` may decorate a type formal declaration to specify covariant (input) variance.
-
-It is going away.
-
 ### `@inlineUnrealizedGoal` decorator
 `@inlineUnrealizedGoal` may decorate a function parameter declaration.
 
@@ -2745,11 +2740,6 @@ where `+` is the sample operator.
 - Prefix: `+_`, the operator appears before its operand, like `-` for negation.
 - Postfix: `_+`, the operator appears after its operand, like `++` for post-increment
   or superscript `T` for matrix transpose.
-
-### `@out` deprecated variance notation
-`@out` may decorate a type formal declaration to specify covariant (input) variance.
-
-It is going away.
 
 ### `@overload` decorator
 Gives an overload name to a function or class member. Temper respects

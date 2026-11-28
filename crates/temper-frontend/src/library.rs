@@ -195,6 +195,9 @@ pub enum Message {
     BareNever,
     /// A call with too few or too many arguments: how many parameters.
     ArityMismatch(usize),
+    /// A generic call with too few or too many type arguments: how many
+    /// type parameters. Kotlin Temper reports nothing.
+    TypeArityMismatch(usize),
     /// `object.key` where `object`'s type has no member `key`: the key
     /// and the type. Kotlin's `BecauseNoSuchMember`.
     NoMember(String, String),
@@ -228,6 +231,15 @@ pub enum Message {
     /// A generic call's type parameter, written with its bound, solved to
     /// a type that doesn't fit the bound.
     TypeFormalBound(String, String, String),
+    /// A generic call whose arguments bind a type parameter two ways that
+    /// joining would blur, one of a type marked `@mayDowncastTo(false)`:
+    /// the type parameter and the two types. Kotlin Temper accepts it.
+    JoinedApart(String, String, String),
+    /// A generic call with a type parameter nothing binds and that can't
+    /// take its bound, which names it: the signature, the arguments'
+    /// types, and the type wanted, or "unknown". Kotlin's
+    /// `TypeActualsUnavailable`.
+    CouldNotInfer(String, String, String),
     /// What may bubble, in a function whose return type doesn't say it
     /// may. Kotlin's `ExpectedNoBubble`.
     ExpectedNoBubble,
@@ -468,6 +480,9 @@ impl Message {
                 "Never needs the type it stands for, as Never<Int> or Never<Void>".into()
             }
             Message::ArityMismatch(n) => format!("Wrong number of arguments.  Expected {n}"),
+            Message::TypeArityMismatch(n) => {
+                format!("Wrong number of type arguments.  Expected {n}")
+            }
             Message::NoMember(key, t) => format!("No member {key} in {t}"),
             Message::NotPubliclyAccessible(key, class) => {
                 format!("Member {key} defined in {class} not publicly accessible")
@@ -486,6 +501,12 @@ impl Message {
             Message::TypeFormalBound(formal, actual, bound) => format!(
                 "Type formal <{formal}> cannot bind to {actual} which does not fit upper bounds [{bound}]"
             ),
+            Message::JoinedApart(formal, a, b) => format!(
+                "{formal} is bound to both {a} and {b}, which can't be told apart once joined; give {formal} explicitly"
+            ),
+            Message::CouldNotInfer(sig, given, context) => {
+                format!("Could not infer type actuals for {sig} given {given} in context {context}")
+            }
             Message::NoCalleeMatches(inputs, among) => {
                 format!("No callee matches inputs [{inputs}] among [{among}]")
             }

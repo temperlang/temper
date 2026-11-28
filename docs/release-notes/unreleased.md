@@ -4,7 +4,7 @@
 - [Auto operator implementation](#auto-operator-implementation)
 - [Rust resumes every block awaiting a promise](#rust-resumes-every-block-awaiting-a-promise)
 - [Decorators for immutable types](#decorators-for-immutable-types)
-- [🚨Breaking change: type parameter variance now requires `@`.](#breaking-change-type-parameter-variance-now-requires-)
+- [🚨Breaking change: type parameter variance removed](#breaking-change-type-parameter-variance-removed)
 - [🚨Breaking change: Multiline string syntax (yes, again)](#breaking-change-multiline-string-syntax-yes-again)
 - [🆕 Bitwise operators](#-bitwise-operators)
 - [🚨Breaking change: Details of rules for `<` ambiguity have changed](#breaking-change-details-of-rules-for--ambiguity-have-changed)
@@ -17,9 +17,11 @@
 - [Extension methods](#extension-methods)
 - [Generated packages need the matching runtimes](#generated-packages-need-the-matching-runtimes)
 - [Fixes for code Temper 0.6.0 accepted](#fixes-for-code-temper-060-accepted)
+- [🚨Breaking change: stricter checks of generic types and arguments](#breaking-change-stricter-checks-of-generic-types-and-arguments)
 - [Classes' `==`](#classes-)
 - [Lua: `Int64` on LuaJIT and Lua 5.1](#lua-int64-on-luajit-and-lua-51)
 - [C++: `Float64.toString` as on the JVM](#c-float64tostring-as-on-the-jvm)
+- [C#: a bounded type parameter's `T?` is `T?`](#c-a-bounded-type-parameters-t-is-t)
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
 - [Fixes on Windows](#fixes-on-windows)
 
@@ -162,17 +164,14 @@ class NoCommitment {}
 This is just a sampling of the rules which enforce `@imu` and `@partialImu`
 tagging.
 
-## 🚨Breaking change: type parameter variance now requires `@`.
+## 🚨Breaking change: type parameter variance removed
 
-Previously, a type parameter could be declared like `<out T>`.
-Now you need to declare it `<@out T>` using decoration/annotation syntax.
-Similarly for contravariant syntax `<@in T>`.
-Invariant remains the default.
-
-Also, both covariance and contravariance are deprecated.  It's not
-clear that explicit variance is translatable to languages that infer
-variance or to language's that are very aggressive about
-monomorphization.
+Temper 0.6.0 let a type parameter be declared covariant, `<out T>` or
+`<@out T>`, or contravariant, `<in T>` or `<@in T>`. Variance is gone:
+every type parameter is invariant, core's too, as many target languages
+can't express variance well. Remove `@out` and `@in` from your code;
+"Stricter checks of generic types and arguments", below, shows how to
+migrate code that relied on them.
 
 ## 🚨Breaking change: Multiline string syntax (yes, again)
 
@@ -416,6 +415,85 @@ writes them, or from a release's packages
   as a parameter of an undeclared type, fails where it runs when it's
   in a string template or has a method called, instead of keeping the
   module from being translated.
+- A trailing block or function literal after type arguments, as
+  `each<Int>(1) { y => y + 1 }`, takes its parameters' types from them
+  and translates for every backend; it stopped translation.
+
+## 🚨Breaking change: stricter checks of generic types and arguments
+
+Code that relied on these going unchecked is now an error:
+
+- A list literal's elements are checked against the element type its
+  place wants, an argument's too, nullable or not: `take(["a", 3])` for
+  `take(xs: List<String>?)` reports the `3`.
+- Every type parameter is invariant, core's too, as C++ and Rust,
+  among others, can't express variance well: a `List<Dog>` isn't a
+  `List<Animal>`, as a `Box<Dog>` isn't a `Box<Animal>`, though Temper
+  0.6.0 accepts the first. The same goes for `Listed`, `Map`, `Mapped`,
+  `Pair`, `Generator`, `SafeGenerator`, `GeneratorResult`, `ValueResult`,
+  `DoneResult`, and `Promise`. To migrate, make the function generic,
+  `let names<T extends Animal>(xs: List<T>)` in place of `let names(xs:
+  List<Animal>)`, or build the list you need in the first place: a list
+  literal takes its element type from the type wanted, so `let xs:
+  List<Animal> = [new Dog()]` works, and `[new A(1)]`, a `List<A>`, isn't
+  a `Listed<P>` for `class A extends P` either. A `Never<Dog>` is still a
+  `Never<Animal>`, as `Never` has no values. The type wanted binds only
+  what a call's arguments leave, so `let b: Box<Animal> = new Box(new
+  Dog())` is an error, a `Box<Dog>`; write `new Box<Animal>(new Dog())`,
+  or keep the `Box<Dog>`. A generic call whose arguments bind a type
+  parameter two ways binds it to their common supertype, as before,
+  where the parameter's whole type is `T` or `T?`; inside another type,
+  as `List<T>`, the first binding stays, so `k(dogs, cat)` for
+  `k<T>(xs: List<T>, x: T)` and `dogs: List<Dog>` reports the `cat`.
+- A generic call whose arguments bind a type parameter two ways whose
+  common supertype is above a type marked `@mayDowncastTo(false)`
+  (`String`, `Boolean`, the number types, `List`, `ListBuilder`, `Map`,
+  and `MapBuilder`), as `new Two(1, "s")` for `class Two<T>(a: T, b:
+  T)`, or `List<Int>` and `List<String>`, is an error: "T is bound to
+  both Int32 and String, which can't be told apart once joined; give T
+  explicitly". Temper 0.6.0 bound `T` to `AnyValue`. To migrate, give
+  the type arguments, `new Two<AnyValue>(1, "s")`, or declare the type
+  wanted, `let t: Two<AnyValue> = new Two(1, "s")`. A value and null
+  still bind `T?`. List literals are the same: `[1, "s"]`, with no
+  element type wanted, is "listT is bound to both Int32 and String, …";
+  declare the type wanted, `let xs: List<AnyValue> = [1, "s"]`.
+- Null alone binds no type parameter, so where it's passed for a bare
+  `T`, as `id(null)` for `id<T>(x: T): T`, it's checked against `T`'s
+  bound: "Expected subtype of AnyValue, but got AnyValue?", as Temper
+  0.6.0 reports it, and so is `[null]`. To migrate, give the type
+  argument, `id<Int?>(null)`.
+- A generic call whose type parameter nothing binds and whose bound
+  names it, as `none()` for `none<T extends Ord<T>>(): List<T>`, is
+  "Could not infer type actuals …", as in Temper 0.6.0, where the
+  backends failed instead. To migrate, give the type argument or the
+  type wanted.
+- `@out` and `@in` are gone: remove them from type parameters.
+- A run-time check that would introduce a type argument is an error for
+  every generic type, as `x is Generator<Int>` for an `x: AnyValue`,
+  where Temper 0.6.0 left alone those marked `@out` or `@in`.
+- A generic call with too many type arguments, as `id<Int, Int>(n)`
+  for `id<T>`, is "Wrong number of type arguments.  Expected 1", as is
+  a type written with the wrong number where no value gives the rest:
+  `Map<Int>` in `f(m: Map<Int>)`, `Promise<Int, String>`, or `Box<Int,
+  Int>` for `class Box<T>`. To migrate, give as many as the type
+  declares.
+- So is a generic type written without any where no value gives them,
+  as `x is Box`, `f(xs: List)`, or `class C extends Sup`, which Temper
+  0.6.0 failed on in other ways. To migrate, write the arguments.
+- Leading type arguments may be given with the rest inferred, as
+  before: `pair<Int>(1, "s")`, `new P<Int>(1, "s")` (which Temper 0.6.0
+  failed to translate), and `let p: P<Int> = new P(1, "s")`, a `P<Int,
+  String>`; so may none, for a variable: `let xs: List = [1]` is a
+  `List<Int>`. The type arguments written must fit the value: `let p:
+  P<Int> = new P("a", "s")` is now an error.
+- A generic call's arguments are checked against the type arguments the
+  type wanted gives: `let b: Box<List<String>> = new Box(["a", 3])`
+  reports the `3`.
+
+A generic method's or function's type parameter keeps its bound in
+every backend, as `where TName : Named` in C#, even where no parameter's
+type names it. `[]` with no element type wanted is a `List<AnyValue>`,
+as in Temper 0.6.0, where the backends failed on it.
 
 ## Classes' `==`
 
@@ -451,6 +529,27 @@ C++ writes a `Float64` as the interpreter and Java do: plain from 1e-3 up
 to 1e7 (`-1500.0`, not `-1.5e+03`), and otherwise with one digit before
 the point and an `e+N` or `e-N` exponent (`1.0e+7`), in the fewest
 digits that read back as the same number.
+
+## C#: a bounded type parameter's `T?` is `T?`
+
+Where a type parameter is bounded by a class or interface of your own
+(or std's), as in `T extends Shown`, C# now writes its `T?` as C#'s own
+`T?`, adding `class` to an interface's constraint (`where T : class,
+IShown`), instead of `TemperLang.Core.Optional<T>`. So a generic
+function's `Pair<A, B?>` result is the `KeyValuePair<int, Named?>` its
+caller names. Other type parameters' `T?` stays `Optional<T>`, since
+such a `T` may be a C# value type like `int`. Where that `T?` sits
+inside a type argument or function type (`Pair<A, B?>`, `List<T?>`)
+and a call gives it another type, the C# backend now says it's not yet
+supported, suggesting a bound, where C#'s compiler failed before.
+
+C# also writes every generic method's and function's bounds as `where`
+constraints, as `where T : class, IShown`, where it wrote none before,
+so exported C# signatures change: host C# code calling them must meet
+the constraints, and a host struct implementing a Temper interface no
+longer satisfies a `T` bounded by it. A call whose type parameter only
+`null` or a left-out argument would give, as `Wrap<Tag>(null)` for
+`wrap<T extends Shown>(x: T? = null)`, names its type arguments.
 
 ## `temper` and its `TEMPER_*` settings
 

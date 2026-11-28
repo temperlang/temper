@@ -18,22 +18,34 @@ use crate::core::{self, CLASS_INTERFACE};
 use crate::library::{Level, Message};
 use crate::scope::{SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
-use crate::types::{ANY_VALUE, NULL, Param, TypeData, TypeId, UNKNOWN, VOID, show_result};
+use crate::types::{
+    ANY_VALUE, NULL, Param, Solution, TypeData, TypeId, UNKNOWN, VOID, show_result,
+};
 use temper_syntax::tree::{NodeId, NodeKind, Span};
 
 /// A call of a generic function, solved.
+#[derive(Clone)]
 pub(super) struct Solved {
     /// The function's signature, with its type parameters as written.
     sig: TypeId,
     /// Its type parameters.
     formals: Vec<SymbolId>,
     /// What each type parameter binds to at this call, unknown where the
-    /// call doesn't say.
-    actuals: Vec<TypeId>,
-    /// Whether each type parameter is unknown as the call says too much:
-    /// arguments bind it two ways, or it has the wrong number of type
-    /// arguments.
-    ambiguous: Vec<bool>,
+    /// call doesn't say, or has too many type arguments.
+    pub(super) actuals: Vec<TypeId>,
+    /// A type parameter its arguments bind two ways whose join goes above
+    /// a type core marks `@mayDowncastTo(false)`, with those two types
+    /// ([`crate::types::Types::unify`]).
+    clash: Option<(usize, TypeId, TypeId)>,
+    /// Which type parameters an argument whose type isn't known, as an
+    /// error leaves one, may bind; they stay unknown rather than take
+    /// their bound ([`Settle::bind_unsolved`]).
+    blocked: Vec<bool>,
+    /// Each type parameter that only null is passed for, where a bare
+    /// `T` is wanted, and no type argument gives; it binds to what it's
+    /// solved as, made nullable, so the call still translates, and null
+    /// is reported as not one ([`Settle::check_generic_args`]).
+    nulled: Vec<bool>,
     /// The call.
     call: NodeId,
     /// The call's arguments, without type arguments.
@@ -41,18 +53,33 @@ pub(super) struct Solved {
     /// For an instance's method, the receiver's type, as
     /// [`super::members::GenericMethod::this`] says.
     this: Option<(TypeId, TypeId)>,
-    /// Whether the call has type arguments, as `id<Int>(x)`.
-    has_type_args: bool,
+    /// How many type arguments the call has, as one in `id<Int>(x)`.
+    type_args: usize,
+}
+
+impl Solved {
+    /// Whether the call's type arguments give each of its type
+    /// parameters, as `id<Int>(x)`, or there are too many.
+    fn has_type_args(&self) -> bool {
+        self.type_args >= self.formals.len() && self.type_args > 0
+    }
+
+    /// Whether the call has more type arguments than type parameters.
+    fn wrong_type_arity(&self) -> bool {
+        self.type_args > self.formals.len()
+    }
 }
 
 impl Settle {
     /// Solves a call of a generic function declared by `let`, as `id(1)`
-    /// or `id<Int>(x)`: from its type arguments, if there are as many as
+    /// or `id<Int>(x)`: from its type arguments, if there are no more than
     /// the function has type parameters (else not at all), unless Kotlin
-    /// Temper would fold the call; otherwise from its arguments' types
-    /// ([`crate::types::Types::unify`]), leaving a type parameter that's
-    /// solved two different ways unknown, as Kotlin may find a common
-    /// supertype. A function literal argument binds by the types it
+    /// Temper would fold the call; those they leave, the trailing ones, as
+    /// `B` in `pair<Int>(1, "s")`, from its arguments' types
+    /// ([`crate::types::Types::unify`]), one solved two different ways
+    /// bound to their common supertype, as Kotlin's solver binds it, so
+    /// `new Two(1, "s")` for `class Two<T>(a: T, b: T)` is a
+    /// `Two<AnyValue>`. A function literal argument binds by the types it
     /// declares, if it declares its result's, as `ls.map { (x): Int => -x
     /// }` binds `O` to `Int32` (one that doesn't isn't used yet); the
     /// arguments are matched against the parameters they're placed at, as a
@@ -127,22 +154,18 @@ impl Settle {
         let TypeData::Fn { params, .. } = self.typing.types.get(sig).clone() else {
             return Ok(None);
         };
-        let mut actuals = vec![UNKNOWN; formals.len()];
-        let mut ambiguous = vec![false; formals.len()];
+        let mut solution = Solution::new(formals.len());
+        let mut blocked = vec![false; formals.len()];
+        let mut nulled = vec![false; formals.len()];
         // Kotlin Temper folds a call of constants to its value before
         // checking it, so its type arguments go unchecked: `let s: String
-        // = id<Int>("a")` passes, as the value is a `String`. It doesn't
-        // fold a constructor's call.
+        // = id<Int>("a")` passes, as the value is a `String`; they give
+        // only what the arguments leave unknown, as `B` in `make<Int,
+        // String>(1)` for `make<A, B>(a: A): P<A, B?>`. It doesn't fold
+        // a constructor's call.
         let folds = foldable && self.may_fold(call, 0);
-        if !type_args.is_empty() && !folds {
-            if type_args.len() == formals.len() {
-                for (actual, &t) in actuals.iter_mut().zip(&type_args) {
-                    *actual = self.eval_type(t);
-                }
-            } else {
-                ambiguous.fill(true);
-            }
-        } else {
+        let given = if folds { &[][..] } else { &type_args[..] };
+        if given.len() < formals.len() {
             let placed = self.placed_params(&params, &args);
             for (&arg, &i) in args.iter().zip(&placed) {
                 let Some(param) = params.get(i) else {
@@ -150,6 +173,8 @@ impl Settle {
                 };
                 // A function literal binds only by what it declares: its
                 // result, and its parameters' types, if any.
+                let mut apart = None;
+                let list = self.is_list_literal(arg);
                 let t = match self.lib.tree.kind(arg) {
                     NodeKind::Fn if !self.declares_result(arg) => continue,
                     // `[]` takes its type from the solution
@@ -157,12 +182,13 @@ impl Settle {
                     // binds by its elements' common type, as its own type
                     // is what the solution wants.
                     _ if self.is_empty_list(arg) => continue,
-                    _ if self.is_list_literal(arg) => {
+                    _ if list => {
                         let elements = self.lib.tree.children(arg)[1..].to_vec();
                         let mut types = Vec::with_capacity(elements.len());
                         for &element in &elements {
                             types.push(self.expr_type(element, forced)?);
                         }
+                        apart = self.common_type_apart(&types).1;
                         let element = self.common_element(&elements, &types);
                         self.typing.types.list_of(element)
                     }
@@ -170,11 +196,68 @@ impl Settle {
                     _ => self.expr_type(arg, forced)?,
                 };
                 let types = &mut self.typing.types;
-                types.unify(param.ty, t, &formals, &mut actuals, &mut ambiguous);
+                if !types.is_known(t) {
+                    for (b, &formal) in blocked.iter_mut().zip(&formals) {
+                        *b |= types.mentions(param.ty, &[formal]);
+                    }
+                }
+                if t == NULL {
+                    if let TypeData::Param(symbol) = *types.get(param.ty) {
+                        let k = formals.iter().position(|&f| f == symbol);
+                        k.into_iter().for_each(|k| nulled[k] = true);
+                    }
+                }
+                if !list {
+                    types.unify(param.ty, t, &formals, &mut solution);
+                    continue;
+                }
+                types.unify_list_literal(param.ty, t, &formals, &mut solution);
+                // Elements that can't be told apart once joined, as in
+                // `["a", 3]`, are a clash of what each would bind, as
+                // `List<String>` and `List<Int32>` for a whole `T`.
+                if let Some((a, b)) = apart {
+                    let (a, b) = (types.list_of(a), types.list_of(b));
+                    let (mut x, mut y) =
+                        (Solution::new(formals.len()), Solution::new(formals.len()));
+                    types.unify_list_literal(param.ty, a, &formals, &mut x);
+                    types.unify_list_literal(param.ty, b, &formals, &mut y);
+                    let k = (0..formals.len()).find(|&k| x.actuals[k] != y.actuals[k]);
+                    if let Some(k) = k {
+                        solution
+                            .clash
+                            .get_or_insert((k, x.actuals[k], y.actuals[k]));
+                    }
+                }
             }
-            for (actual, &conflict) in actuals.iter_mut().zip(&ambiguous) {
-                if conflict {
+            // Null alone doesn't bind one, which Kotlin reports where it's
+            // passed for a bare `T` ([`Settle::check_generic_args`]).
+            for (k, actual) in solution.actuals.iter_mut().enumerate() {
+                nulled[k] &= *actual == NULL;
+                if *actual == NULL {
                     *actual = UNKNOWN;
+                }
+            }
+        }
+        let Solution {
+            mut actuals,
+            mut clash,
+            ..
+        } = solution;
+        if given.len() <= formals.len() {
+            for (actual, &t) in actuals.iter_mut().zip(given) {
+                *actual = self.eval_type(t);
+            }
+        }
+        // Type arguments are never limited, even where Kotlin would fold
+        // the call and ignore them.
+        clash = clash.filter(|&(k, ..)| k >= type_args.len());
+        for k in 0..type_args.len().min(nulled.len()) {
+            nulled[k] = false;
+        }
+        if folds && type_args.len() <= formals.len() {
+            for (actual, &t) in actuals.iter_mut().zip(&type_args) {
+                if *actual == UNKNOWN {
+                    *actual = self.eval_type(t);
                 }
             }
         }
@@ -182,11 +265,13 @@ impl Settle {
             sig,
             formals,
             actuals,
-            ambiguous,
+            clash,
+            blocked,
+            nulled,
             call,
             args,
             this,
-            has_type_args: !type_args.is_empty(),
+            type_args: type_args.len(),
         }))
     }
 
@@ -207,38 +292,40 @@ impl Settle {
         core::fn_parts(tree, f).1.is_some() && core::fn_supers(tree, f).is_empty()
     }
 
-    /// A solved call's type, with the type parameters its arguments leave
-    /// unknown bound by the type its place wants, where the call has no
-    /// type arguments, as Kotlin Temper's solver binds them: `new
-    /// ListBuilder()` where a `ListBuilder<Int>` is wanted is one.
-    pub(super) fn solved_type(
-        &mut self,
-        solved: &mut Solved,
-        forced: bool,
-    ) -> Result<TypeId, Fact> {
+    /// Binds the type parameters a solved call's arguments leave
+    /// unknown, or bind in a clash, by the type its place wants, where
+    /// the call's type arguments don't give them, as Kotlin Temper's
+    /// solver binds them: `new ListBuilder()` where a `ListBuilder<Int>`
+    /// is wanted is one, and so is `new Two(1, "s")` where a
+    /// `Two<AnyValue>` is.
+    pub(super) fn bind_wanted(&mut self, solved: &mut Solved, forced: bool) -> Result<(), Fact> {
         let t = self.solved_result(solved);
-        if self.typing.types.is_known(t) || solved.has_type_args {
-            return Ok(t);
+        if (self.typing.types.is_known(t) && solved.clash.is_none()) || solved.has_type_args() {
+            return Ok(());
         }
         let Some(wanted) = self.wanted_type(solved.call, forced)? else {
             self.literal_results_as_bounds(solved);
-            return Ok(self.solved_result(solved));
+            return Ok(());
         };
         let TypeData::Fn { ret, .. } = *self.typing.types.get(solved.sig) else {
-            return Ok(t);
+            return Ok(());
         };
         let wanted = match (self.typing.types.get(wanted), self.typing.types.get(ret)) {
             (&TypeData::Nullable(inner), ret) if !matches!(ret, TypeData::Nullable(_)) => inner,
             _ => wanted,
         };
         let bindings = self.wanted_bindings(ret, wanted, &solved.formals);
+        if let Some((k, ..)) = solved.clash.filter(|&(k, ..)| bindings[k] != UNKNOWN) {
+            solved.actuals[k] = UNKNOWN;
+            solved.clash = None;
+        }
         for (actual, b) in solved.actuals.iter_mut().zip(bindings) {
             if *actual == UNKNOWN {
                 *actual = b;
             }
         }
         self.literal_results_as_bounds(solved);
-        Ok(self.solved_result(solved))
+        Ok(())
     }
 
     /// Binds each type parameter still unknown that a function literal
@@ -248,7 +335,7 @@ impl Settle {
     /// `fn (Int32): AnyValue` (notes/typing.md, "Function literals and
     /// target typing").
     fn literal_results_as_bounds(&mut self, solved: &mut Solved) {
-        if solved.has_type_args {
+        if solved.has_type_args() {
             return;
         }
         let TypeData::Fn { params, .. } = self.typing.types.get(solved.sig).clone() else {
@@ -271,14 +358,18 @@ impl Settle {
         }
         let bounds = self.unsolved_as_bounds(solved);
         for (k, bound) in bounds.into_iter().enumerate() {
-            if open[k] && solved.actuals[k] == UNKNOWN && !solved.ambiguous[k] {
+            if open[k] && solved.actuals[k] == UNKNOWN {
                 solved.actuals[k] = bound;
             }
         }
     }
 
     /// Checks a call of a generic function, as Kotlin Temper's solver
-    /// does, at its positions: a type parameter bound to a type outside
+    /// does, at its positions: a type parameter its arguments bind two
+    /// ways whose join would go above a type core marks
+    /// `@mayDowncastTo(false)`, "T is bound to both Int32 and String, which
+    /// can't be told apart once joined; give T explicitly", at the call,
+    /// which Kotlin accepts; a type parameter bound to a type outside
     /// its bound, "Type formal <T extends Animal> cannot bind to Int32
     /// which does not fit upper bounds [Animal]", at the call; the wrong
     /// number of arguments, "No callee matches inputs [Int32] among [<T
@@ -286,15 +377,38 @@ impl Settle {
     /// that don't fit the solved signature, "Actual arguments do not match
     /// signature: <T extends AnyValue>(T, Int32) -> T expected [String,
     /// Int32], but got [Int32, String]", from the first that doesn't to
-    /// the last. Returns whether the call was of a generic function.
+    /// the last. And more type arguments than type parameters, "Wrong
+    /// number of type arguments.  Expected 3", at the call, which Kotlin
+    /// misses; its type parameters stay unknown. Returns
+    /// whether the call was of a generic function.
     pub(super) fn check_generic_call(&mut self, call: NodeId) -> bool {
-        let Ok(Some(solved)) = self.solve_call(call, false) else {
+        let Ok(Some(mut solved)) = self.solve_call(call, false) else {
             return false;
         };
+        // Checked against the solution that types the call, with what its
+        // arguments leave unknown bound by the type wanted, as `T` in `let
+        // b: Box<List<String>> = new Box(["a", 3])`.
+        if self.bind_wanted(&mut solved, false).is_err() {
+            return true;
+        }
         let span = self.lib.tree.span(call);
+        if solved.wrong_type_arity() {
+            let message = Message::TypeArityMismatch(solved.formals.len());
+            self.lib.report(Level::Error, message, span);
+            return true;
+        }
+        if let Some((k, a, b)) = solved.clash {
+            let formal = self.formal_type(solved.formals[k]);
+            let message = Message::JoinedApart(self.show(formal), self.show(a), self.show(b));
+            self.lib.report(Level::Error, message, span);
+            return true;
+        }
+        if self.check_unbindable(&solved) {
+            return true;
+        }
         for (&formal, &actual) in solved.formals.iter().zip(&solved.actuals) {
+            let param = self.formal_type(formal);
             let types = &mut self.typing.types;
-            let param = types.param(formal);
             let bound = types.upper(param);
             // A bound may name the call's own type parameters, as `K
             // extends MapKey<K>` does, so it's checked with what they're
@@ -323,14 +437,43 @@ impl Settle {
         true
     }
 
+    /// Reports a solved call with a type parameter that nothing binds and
+    /// that can't take its bound, which names it, as `T` in `none()` for
+    /// `none<T extends Ord<T>>(): List<T>`, as Kotlin Temper does: "Could
+    /// not infer type actuals for <T extends Ord<T>>() -> List<T> given []
+    /// in context unknown", at the call, with the type wanted as the
+    /// context. Not one an argument whose type isn't known may bind.
+    /// Returns whether it reported it.
+    fn check_unbindable(&mut self, solved: &Solved) -> bool {
+        let mut bound = solved.clone();
+        self.bind_unsolved(&mut bound);
+        let unbound = (bound.actuals.iter().zip(&bound.blocked)).any(|(&a, &b)| a == UNKNOWN && !b);
+        if !unbound {
+            return false;
+        }
+        let this = solved.this.map(|(_, actual)| actual);
+        let args: Vec<TypeId> = solved.args.iter().map(|&a| self.known_type(a)).collect();
+        let given: Vec<String> = this.iter().chain(&args).map(|&t| self.show(t)).collect();
+        let context = match self.wanted_type(solved.call, false) {
+            Ok(Some(t)) => self.show(t),
+            _ => "unknown".to_string(),
+        };
+        let sig = self.show_generic_sig(solved);
+        let message = Message::CouldNotInfer(sig, format!("[{}]", given.join(", ")), context);
+        let span = self.lib.tree.span(solved.call);
+        self.lib.report(Level::Error, message, span);
+        true
+    }
+
     /// Reports a generic call's arguments that don't fit what the type
     /// its place wants binds, as Kotlin Temper's solver does, where `let
     /// xs: List<String> = wrap(1)` is "Actual arguments do not match
     /// signature: <T extends AnyValue>(T) -> List<T> expected [String],
     /// but got [Int32]", at the argument, rather than an error at the
     /// place. Only where the call's result isn't a bare type parameter
-    /// (`T` or `T?`), which Kotlin solves from the arguments, and the call
-    /// has no type arguments. Returns whether it reported an error.
+    /// (`T` or `T?`), which Kotlin solves from the arguments, and for the
+    /// type parameters the call's type arguments don't give. Returns
+    /// whether it reported an error.
     pub(super) fn check_generic_wanted(&mut self, call: NodeId, wanted: TypeId) -> bool {
         let Ok(Some(mut solved)) = self.solve_call(call, false) else {
             return false;
@@ -344,12 +487,13 @@ impl Settle {
             TypeData::Param(_) => true,
             _ => false,
         };
-        if bare || solved.has_type_args {
+        if bare || solved.has_type_args() {
             return false;
         }
         let mut any = false;
         let bindings = self.wanted_bindings(ret, wanted, &solved.formals);
-        for (actual, b) in solved.actuals.iter_mut().zip(bindings) {
+        let given = solved.type_args;
+        for (actual, b) in solved.actuals.iter_mut().zip(bindings).skip(given) {
             if b != UNKNOWN {
                 *actual = b;
                 any = true;
@@ -360,7 +504,7 @@ impl Settle {
 
     /// What the type wanted where a generic call's value goes binds each
     /// of its type parameters to, its result `ret` matched against it part
-    /// by part, unknown where it binds none or two ways.
+    /// by part, unknown where it binds none.
     fn wanted_bindings(
         &mut self,
         ret: TypeId,
@@ -370,19 +514,16 @@ impl Settle {
         let types = &mut self.typing.types;
         // `List<T>` where a `Listed<String>` is wanted is a `Listed<T>`.
         let ret = types.as_supertype(ret, wanted);
-        let n = formals.len();
-        let (mut bound, mut conflicts) = (vec![UNKNOWN; n], vec![false; n]);
-        types.unify(ret, wanted, formals, &mut bound, &mut conflicts);
-        (bound.into_iter().zip(conflicts))
-            .map(|(b, conflict)| if conflict { UNKNOWN } else { b })
-            .collect()
+        let mut solution = Solution::new(formals.len());
+        types.unify(ret, wanted, formals, &mut solution);
+        solution.actuals
     }
 
     /// The parameters of a generic call that has a function literal
     /// argument, with what's solved put in, as Kotlin Temper types the
     /// literal once it has solved the call: each type parameter from the
     /// other arguments and type arguments ([`Settle::solve_call`]), and
-    /// what they leave unknown, where the call has no type arguments, from
+    /// what they leave unknown, but for those type arguments give, from
     /// the type its place wants, which binds first where the call's
     /// result isn't a bare type parameter, as for
     /// [`Settle::check_generic_wanted`]; unknown where none of them says.
@@ -398,7 +539,7 @@ impl Settle {
         let TypeData::Fn { params, ret, .. } = self.typing.types.get(solved.sig).clone() else {
             return Ok(None);
         };
-        let wanted = match solved.has_type_args {
+        let wanted = match solved.has_type_args() {
             true => None,
             false => self.wanted_type(call, forced)?,
         };
@@ -406,10 +547,9 @@ impl Settle {
             let types = &self.typing.types;
             let bare = matches!(types.get(self.non_null(ret)), TypeData::Param(_));
             let bindings = self.wanted_bindings(ret, wanted, &solved.formals);
-            for ((actual, b), &ambiguous) in
-                (solved.actuals.iter_mut().zip(bindings)).zip(&solved.ambiguous)
-            {
-                if b != UNKNOWN && !ambiguous && (*actual == UNKNOWN || !bare) {
+            let given = solved.type_args;
+            for (actual, b) in solved.actuals.iter_mut().zip(bindings).skip(given) {
+                if b != UNKNOWN && (*actual == UNKNOWN || !bare) {
                     *actual = b;
                 }
             }
@@ -467,11 +607,16 @@ impl Settle {
             sig,
             formals: vec![formal],
             actuals: vec![element],
-            ambiguous: vec![false],
+            clash: None,
+            blocked: vec![false],
+            nulled: vec![false],
             call: list,
             args,
             this: None,
-            has_type_args: false,
+            // The element type wanted gives `listT`, as a type argument
+            // would, so a null that doesn't fit it misfits as any element
+            // does, as Kotlin reports it.
+            type_args: 1,
         })
     }
 
@@ -510,28 +655,68 @@ impl Settle {
         }
         // Kotlin's solver binds a type parameter that no argument binds to
         // its bound, so `ls.map(1)` wants a `fn (Int32): AnyValue`; but
-        // tempest doesn't bind one to null or `Void`, which Kotlin reports
-        // otherwise, nor to an argument whose type it doesn't know.
+        // tempest doesn't bind one for `Void`, which Kotlin reports
+        // otherwise, nor for an argument whose type it doesn't know.
         let bounds = self.unsolved_as_bounds(solved);
-        let plain =
-            (arg_types.iter()).all(|&t| self.typing.types.is_known(t) && t != NULL && t != VOID);
+        let plain = (arg_types.iter()).all(|&t| self.typing.types.is_known(t) && t != VOID);
         let checked: Vec<TypeId> = (0..bounds.len())
             .map(|i| match solved.actuals[i] {
-                UNKNOWN if plain && !solved.ambiguous[i] => bounds[i],
+                UNKNOWN if plain => bounds[i],
                 actual => actual,
             })
             .collect();
+        // Null passed for a bare `T`, which it doesn't bind, where `T` is
+        // solved as a type that isn't nullable, its bound if nothing else
+        // binds it: "Expected subtype of AnyValue, but got AnyValue?" for
+        // `id(null)`, at the null, as Kotlin reports it. Not for `T` as
+        // type arguments give it, which misfits as any other argument.
+        let placed = self.placed_params(&params, &solved.args);
+        let mut reported = false;
+        let mut nulls = vec![false; solved.args.len()];
+        for (i, &p) in placed.iter().enumerate() {
+            let param = params.get(p).map(|p| self.typing.types.get(p.ty));
+            let (NULL, Some(&TypeData::Param(symbol))) = (arg_types[i], param) else {
+                continue;
+            };
+            let Some(k) = solved.formals.iter().position(|&f| f == symbol) else {
+                continue;
+            };
+            let types = &mut self.typing.types;
+            let t = checked[k];
+            let nullable = matches!(types.get(t), TypeData::Nullable(_));
+            if k < solved.type_args || !types.is_known(t) || nullable {
+                continue;
+            }
+            let t_or_null = types.nullable(t);
+            let message = Message::ExpectedSubType(self.show(t), self.show(t_or_null));
+            let span = self.lib.tree.span(solved.args[i]);
+            self.lib.report(Level::Error, message, span);
+            (nulls[i], reported) = (true, true);
+        }
         let wanted: Vec<TypeId> = (params.iter().take(solved.args.len()))
             .map(|p| {
                 let types = &mut self.typing.types;
                 types.substitute(p.ty, &solved.formals, &checked)
             })
             .collect();
+        // A list literal whose elements have no common type, or none
+        // that keeps them apart ([`Settle::list_apart`]), as `["a", 3]`,
+        // is checked element by element ([`Settle::check_list_wanted`]).
+        let mut done = nulls;
+        for (i, &arg) in solved.args.iter().enumerate().take(wanted.len()) {
+            let unknown = !self.typing.types.is_known(arg_types[i]);
+            if !self.is_list_literal(arg) || !(unknown || self.list_apart(arg)) {
+                continue;
+            }
+            if self.check_list_wanted(arg, wanted[i]) {
+                (done[i], reported) = (true, true);
+            }
+        }
         let unfit: Vec<usize> = (0..wanted.len())
-            .filter(|&i| self.misfits(arg_types[i], wanted[i], solved.args[i]))
+            .filter(|&i| !done[i] && self.misfits(arg_types[i], wanted[i], solved.args[i]))
             .collect();
         let (Some(&first), Some(&last)) = (unfit.first(), unfit.last()) else {
-            return false;
+            return reported;
         };
         // A `@fun` interface's value where another's is wanted, alone.
         if let [i] = unfit[..] {
@@ -547,7 +732,10 @@ impl Settle {
         // Kotlin's solver gives `null` the type wanted, made nullable.
         let got: Vec<String> = (solved.this.map(|(_, actual)| self.show(actual)).into_iter())
             .chain((arg_types.iter().zip(&wanted)).map(|(&t, &w)| match t {
-                NULL => format!("{}?", self.show(w)),
+                NULL => {
+                    let w = self.typing.types.nullable(w);
+                    self.show(w)
+                }
                 _ => self.show(t),
             }))
             .collect();
@@ -572,10 +760,10 @@ impl Settle {
     /// unknown bound to its bound, where that's known and doesn't name the
     /// function's type parameters.
     fn unsolved_as_bounds(&mut self, solved: &Solved) -> Vec<TypeId> {
-        let types = &mut self.typing.types;
         (solved.formals.iter().zip(&solved.actuals))
             .map(|(&formal, &actual)| {
-                let param = types.param(formal);
+                let param = self.formal_type(formal);
+                let types = &mut self.typing.types;
                 let bound = types.upper(param);
                 let usable = types.is_known(bound) && !types.mentions(bound, &solved.formals);
                 match (actual, usable) {
@@ -586,34 +774,39 @@ impl Settle {
             .collect()
     }
 
-    /// A solved call's type arguments, settled for tmpl: what the call
-    /// binds, and for a type parameter that appears in none of the
-    /// function's parameters' types nor its result's, so nothing at the
-    /// call can bind it (`CONTEXT` in `combine<CONTEXT extends Context,
-    /// T>(x: T): T`), its bound, or `AnyValue` if it has none, as Kotlin
-    /// Temper's solver binds it, with the other type parameters put in.
-    /// Others still unknown stay so.
-    pub(super) fn settled_type_args(&mut self, solved: &Solved) -> Vec<TypeId> {
-        let TypeData::Fn { params, ret, .. } = self.typing.types.get(solved.sig).clone() else {
-            return solved.actuals.clone();
-        };
-        let mut settled = solved.actuals.clone();
-        for (k, &formal) in solved.formals.iter().enumerate() {
-            let only = &solved.formals[k..=k];
-            let types = &self.typing.types;
-            let used =
-                types.mentions(ret, only) || params.iter().any(|p| types.mentions(p.ty, only));
-            if settled[k] != UNKNOWN || solved.ambiguous[k] || used {
+    /// Binds each type parameter a solved call still leaves unknown to
+    /// its bound, as Kotlin Temper's solver does: the bound as declared,
+    /// or `AnyValue`, with what the others bind put in, so `make(1)` and
+    /// `make<Int>(1)` for `make<A, B>(a: A): P<A, B?>` are a `P<Int32,
+    /// AnyValue?>`, `U` in `<T, U extends T>` binds to what `T` does, and
+    /// a type parameter nothing at the call can bind (`CONTEXT` in
+    /// `combine<CONTEXT extends Context, T>(x: T): T`) to its bound too.
+    /// Not one that an argument whose type isn't known may bind, nor any
+    /// where the call has too many type arguments, as those are errors
+    /// of their own, nor one whose bound names it (`K extends
+    /// MapKey<K>`).
+    pub(super) fn bind_unsolved(&mut self, solved: &mut Solved) {
+        if solved.wrong_type_arity() {
+            return;
+        }
+        for k in 0..solved.formals.len() {
+            if solved.actuals[k] != UNKNOWN || solved.blocked[k] {
                 continue;
             }
-            let bound = self.declared_bound(formal);
+            let bound = self.declared_bound(solved.formals[k]);
             let types = &mut self.typing.types;
             let bound = types.substitute(bound, &solved.formals, &solved.actuals);
             if types.is_known(bound) {
-                settled[k] = bound;
+                solved.actuals[k] = bound;
             }
         }
-        settled
+        // One only null is passed for, as `T` in `id(null)`, an error, as
+        // what it's solved as made nullable, which null is.
+        for (actual, &nulled) in solved.actuals.iter_mut().zip(&solved.nulled) {
+            if nulled && self.typing.types.is_known(*actual) {
+                *actual = self.typing.types.nullable(*actual);
+            }
+        }
     }
 
     /// Whether a value of type `s` can't be passed where a `t` is wanted,
@@ -722,12 +915,18 @@ impl Settle {
         Some((type_args, values))
     }
 
+    /// A generic function's type parameter's type, with its bound set
+    /// ([`Settle::type_param_type`]), whatever was typed first.
+    fn formal_type(&mut self, formal: SymbolId) -> TypeId {
+        self.type_param_type(formal);
+        self.typing.types.param(formal)
+    }
+
     /// A type parameter with its bound, as Kotlin Temper writes it: `T
     /// extends AnyValue`.
     fn show_formal(&mut self, formal: SymbolId) -> String {
-        let types = &mut self.typing.types;
-        let param = types.param(formal);
-        let bound = types.upper(param);
+        let param = self.formal_type(formal);
+        let bound = self.typing.types.upper(param);
         format!("{} extends {}", self.show(param), self.show(bound))
     }
 

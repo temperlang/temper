@@ -5,7 +5,7 @@
 //! parameter, and, as information, checks that are unnecessary.
 
 use crate::builtins::{Builtin, Function};
-use crate::core::{self, CLASS_INTERFACE, ROLE_MASK, ROLE_TYPE_PARAM, TYPE_PARAM_VARIANT};
+use crate::core::{self, CLASS_INTERFACE, ROLE_MASK, ROLE_TYPE_PARAM};
 use crate::library::{Level, Message, RttiProblem};
 use crate::scope::SymbolKind;
 use crate::settle::Settle;
@@ -120,21 +120,13 @@ impl Settle {
     /// Whether checking for `t` would check a type argument that `s`
     /// doesn't have, as `Box<Int>` from `AnyValue`, which erasure leaves
     /// no way to: one of `t`'s arguments that isn't one of `s`'s, as
-    /// Kotlin Temper's `IllegalRttiCheckActuals` finds them. Not for a
-    /// type parameter marked `@out` or `@in`, which Kotlin leaves alone.
+    /// Kotlin Temper's `IllegalRttiCheckActuals` finds them, and for a
+    /// type parameter Kotlin marks `@out` or `@in` too, which it leaves
+    /// alone, as type parameters are invariant.
     fn introduces_args(&self, s: TypeId, t: TypeId) -> bool {
         let types = &self.typing.types;
-        let base = types.base(t);
-        let variant = |index: usize| match *types.get(base) {
-            TypeData::Class(symbol) => self.type_decl(symbol).is_none_or(|class| {
-                let tree = &self.lib.tree;
-                (core::type_params(tree, class).get(index))
-                    .is_none_or(|&p| tree.data(p) & TYPE_PARAM_VARIANT != 0)
-            }),
-            _ => types.is_builtin_variant(base, index),
-        };
         let have = types.args(s);
-        (types.args(t).iter().enumerate()).any(|(i, a)| !variant(i) && !have.contains(a))
+        (types.args(t).iter()).any(|a| !have.contains(a))
     }
 
     /// Whether `subject as target` may bubble: when it's allowed and

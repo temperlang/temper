@@ -208,7 +208,8 @@ sub-namespace and subdirectory; one file per type; module top levels in
 - Interfaces `IX : IBase`; default methods call a `protected static XDefault`
   helper.
 - Optional parameters `int? i = null`; generic nullable via
-  `TemperLang.Core.Optional<T>`.
+  `TemperLang.Core.Optional<T>`, but `T?` where `T` is bounded by a
+  non-core class or interface (`where T : class, IShown`).
 - Collections: `IReadOnlyList`, `IList`, `IReadOnlyDictionary`,
   `IDictionary`; functions `Func`/`Action`; `Task<T>`; failure is exceptions.
 - Exported `let`s are `public static` fields.

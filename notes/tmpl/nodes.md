@@ -480,8 +480,9 @@ Types gain type arguments and type parameters ([types.md](types.md)).
   parameter's type nor the result's (`CONTEXT` in `combine<CONTEXT
   extends Context, T>(x: T): T`), its bound, `AnyValue` if it has none,
   as Kotlin binds it. Backends whose target infers only from arguments
-  (Rust, C#) write them where `analysis::infers_type_args` says it
-  can't, all of them, as neither allows some; C++ writes them always.
+  (Rust, C#) write them where `analysis::infers_type_args_from` says it
+  can't, as where only a `null` or left-out argument would tell, all of
+  them, as neither allows some; C++ writes them always.
 - **Text:** `(list(a, b)): List#64<Int32>`.
 
 Validator rule T4: a call has as many type arguments as its callee has

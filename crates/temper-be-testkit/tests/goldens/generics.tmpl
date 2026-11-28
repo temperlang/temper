@@ -2,59 +2,59 @@ tmpl 1 model 1 library generics 0.0.0
 
 uses `temper-core`#14 0.0.0-alpha.0.0 {
   class Pair#15<K#16, V#17> {
-    connected constructor constructor#79(key: K#16, value: V#17): Pair#15<K#16, V#17>;
-    let key#109: K#16;
-    let value#110: V#17;
+    connected constructor constructor#99(key: K#16, value: V#17): Pair#15<K#16, V#17>;
+    let key#139: K#16;
+    let value#140: V#17;
   }
-  class List#24<T#25> extends Listed#26<T#25> {
-    connected method get#84(index: Int32): T#25;
-    connected get length#86(): Int32;
+  class List#26<T#27> extends Listed#28<T#27> {
+    connected method get#105(index: Int32): T#27;
+    connected get length#107(): Int32;
   }
-  interface Listed#26<T#27> {
-    connected get isEmpty#83(): Boolean;
-    connected get length#97(): Int32;
-    connected method get#98(index: Int32): T#27;
-    connected method getOr#116(index: Int32, fallback: T#27): T#27;
-    connected method slice#117(begin: Int32, end: Int32): List#24<T#27>;
+  interface Listed#28<T#29> {
+    connected get isEmpty#104(): Boolean;
+    connected get length#127(): Int32;
+    connected method get#128(index: Int32): T#29;
+    connected method getOr#158(index: Int32, fallback: T#29): T#29;
+    connected method slice#159(begin: Int32, end: Int32): List#26<T#29>;
   }
-  class ListBuilder#56<T#57> extends Listed#26<T#57> {
-    connected constructor constructor#91(): ListBuilder#56<T#57>;
-    connected get length#92(): Int32;
-    connected method add#113(newValue: T#57, at?: Int32): Void;
-    connected method removeLast#114(): T#57;
-    connected method toList#115(): List#24<T#57>;
-    connected method set#136(index: Int32, newValue: T#57): Void;
+  class ListBuilder#76<T#77> extends Listed#28<T#77> {
+    connected constructor constructor#112(): ListBuilder#76<T#77>;
+    connected get length#113(): Int32;
+    connected method add#155(newValue: T#77, at?: Int32): Void;
+    connected method removeLast#156(): T#77;
+    connected method toList#157(): List#26<T#77>;
+    connected method set#176(index: Int32, newValue: T#77): Void;
   }
-  class Map#60<K#61 extends MapKey#63<K#61>, V#62> extends Mapped#65<K#61, V#62> {
-    connected constructor constructor#118(entries: List#24<Pair#15<K#61, V#62>>): Map#60<K#61, V#62>;
+  class Map#80<K#81 extends MapKey#83<K#81>, V#82> extends Mapped#85<K#81, V#82> {
+    connected constructor constructor#160(entries: List#26<Pair#15<K#81, V#82>>): Map#80<K#81, V#82>;
   }
-  interface MapKey#63<EQ#64> {}
-  interface Mapped#65<K#66 extends MapKey#63<K#66>, V#67> {
-    connected method get#119(key: K#66): V#67 throws Bubble;
-    connected method has#120(key: K#66): Boolean;
-    connected get length#123(): Int32;
-    connected method getOr#127(key: K#66, fallback: V#67): V#67;
-    connected method keys#132(): Listed#26<K#66>;
+  interface MapKey#83<EQ#84> {}
+  interface Mapped#85<K#86 extends MapKey#83<K#86>, V#87> {
+    connected method get#161(key: K#86): V#87 throws Bubble;
+    connected method has#162(key: K#86): Boolean;
+    connected get length#163(): Int32;
+    connected method getOr#167(key: K#86, fallback: V#87): V#87;
+    connected method keys#172(): Listed#28<K#86>;
   }
-  class MapBuilder#69<K#70 extends MapKey#63<K#70>, V#71> extends Mapped#65<K#70, V#71> {
-    connected constructor constructor#124(): MapBuilder#69<K#70, V#71>;
-    connected method set#125(key: K#70, newValue: V#71): Void;
-    connected method remove#131(key: K#70): V#71 throws Bubble;
+  class MapBuilder#89<K#90 extends MapKey#83<K#90>, V#91> extends Mapped#85<K#90, V#91> {
+    connected constructor constructor#164(): MapBuilder#89<K#90, V#91>;
+    connected method set#165(key: K#90, newValue: V#91): Void;
+    connected method remove#171(key: K#90): V#91 throws Bubble;
   }
-  interface Console#104 {
-    connected method log#105(message: String): Void;
+  interface Console#134 {
+    connected method log#135(message: String): Void;
   }
-  class Int32#107 {
-    connected method toString#108(radix?: Int32): String;
+  class Int32#137 {
+    connected method toString#138(radix?: Int32): String;
   }
-  class Boolean#121 {
-    connected method toString#122(): String;
+  class Boolean#143 {
+    connected method toString#144(): String;
   }
-  connected fn getConsole#176(name?: String): Console#104;
+  connected fn getConsole#216(name?: String): Console#134;
 }
 
 module generics#0 {
-  let ~console#106: Console#104;
+  let ~console#136: Console#134;
 
   export interface Holder#1<T#8> {
     abstract get held#11(): T#8;
@@ -62,207 +62,262 @@ module generics#0 {
 
   export class Box#2<T#9> extends Holder#1<T#9> {
     let value#12: T#9;
-    constructor constructor#19(value#80: T#9): Box#2<T#9> {
-      this.value#12 = value#80;
+    constructor constructor#21(value#101: T#9): Box#2<T#9> {
+      this.value#12 = value#101;
     }
     get held#13(): T#9 {
       return this.value#12;
     }
-    method pairWith#18(other#78: Int32): Pair#15<T#9, Int32> {
-      return new constructor#79<T#9, Int32>(this.value#12, other#78);
+    method pairWith#18(other#98: Int32): Pair#15<T#9, Int32> {
+      return new constructor#99<T#9, Int32>(this.value#12, other#98);
+    }
+    method applied#19<TOut#20>(f#100: fn (T#9): TOut#20): TOut#20 {
+      return f#100(this.value#12);
     }
   }
 
   export class Named#3 {
-    let name#20: String;
-    constructor constructor#21(name#81: String): Named#3 {
-      this.name#20 = name#81;
+    let name#22: String;
+    constructor constructor#23(name#102: String): Named#3 {
+      this.name#22 = name#102;
     }
   }
 
   export class Counter#4 {
-    var n#22: Int32;
-    constructor constructor#23(n#82: Int32): Counter#4 {
-      this.n#22 = n#82;
+    var n#24: Int32;
+    constructor constructor#25(n#103: Int32): Counter#4 {
+      this.n#24 = n#103;
     }
   }
 
   export class Shelf#5<T#10 extends Named#3> {
-    let items#28: List#24<T#10>;
-    constructor constructor#32(items#87: List#24<T#10>): Shelf#5<T#10> {
-      this.items#28 = items#87;
+    let items#30: List#26<T#10>;
+    constructor constructor#34(items#108: List#26<T#10>): Shelf#5<T#10> {
+      this.items#30 = items#108;
     }
-    method firstName#29(): String? {
-      if (this.items#28.isEmpty#83()) {
+    method firstName#31(): String? {
+      if (this.items#30.isEmpty#104()) {
         return (null): String?;
       } else {
-        return (asNullable(((upcast(this.items#28.get#84(0))): Named#3).name#20)): String?;
+        return (asNullable(((upcast(this.items#30.get#105(0))): Named#3).name#22)): String?;
       }
     }
-    method tally#30<TName#31>(extra#85: Int32): Int32 {
-      return %Int32.add(this.items#28.length#86(), extra#85);
+    method tally#32<TName#33 extends Named#3>(extra#106: Int32): Int32 {
+      return %Int32.add(this.items#30.length#107(), extra#106);
     }
   }
 
   export interface Scene#6 {}
 
   export class Stage#7 extends Scene#6 {
-    constructor constructor#33(): Stage#7 {}
+    constructor constructor#35(): Stage#7 {}
   }
 
-  fn tagged#34<S#35, T#36>(x#88: T#36): T#36 {
-    return x#88;
+  fn tagged#36<S#37 extends Scene#6, T#38>(x#109: T#38): T#38 {
+    return x#109;
   }
 
-  fn countOf#37<T#38>(n#89: Int32): Int32 {
-    let b#90: ListBuilder#56<T#38> = new constructor#91<T#38>();
-    return %Int32.add(b#90.length#92(), n#89);
+  fn countOf#39<T#40>(n#110: Int32): Int32 {
+    let b#111: ListBuilder#76<T#40> = new constructor#112<T#40>();
+    return %Int32.add(b#111.length#113(), n#110);
   }
 
-  fn relayed#39<S#40 extends Scene#6, T#41>(x#93: T#41): T#41 {
-    return tagged#34<S#40, T#41>(x#93);
+  fn relayed#41<S#42 extends Scene#6, T#43>(x#114: T#43): T#43 {
+    return tagged#36<S#42, T#43>(x#114);
   }
 
-  fn noneIn#42(length#94: Int32): Boolean {
-    return %Int32.eq(length#94, 0);
+  fn halfPair#44<A#45, B#46>(a#115: A#45): Pair#15<A#45, List#26<B#46>> {
+    return new constructor#99<A#45, List#26<B#46>>(a#115, (list()): List#26<B#46>);
   }
 
-  export fn first#43<T#44>(items#95: Listed#26<T#44>, fallback#96: T#44): T#44 {
-    if (noneIn#42(items#95.length#97())) {
-      return fallback#96;
+  fn opt#47<T#48>(x#116: T#48?): T#48? {
+    return x#116;
+  }
+
+  fn scaled#49<T#50>(x#117: T#50, f#118: fn (T#50): Int32, scale#119?: Int32?): Int32 {
+    let scale#120: Int32 = (coalesce(scale#119, 1)): Int32;
+    return %Int32.mul(f#118(x#117), scale#120);
+  }
+
+  fn joined#51<A#52, B#53>(a#121: A#52, b#122: B#53, f#123: fn (A#52, B#53): String): String {
+    return f#123(a#121, b#122);
+  }
+
+  fn noneIn#54(length#124: Int32): Boolean {
+    return %Int32.eq(length#124, 0);
+  }
+
+  export fn first#55<T#56>(items#125: Listed#28<T#56>, fallback#126: T#56): T#56 {
+    if (noneIn#54(items#125.length#127())) {
+      return fallback#126;
     } else {
-      return items#95.get#98(0);
+      return items#125.get#128(0);
     }
   }
 
-  fn held#45<T#46>(h#99: Holder#1<T#46>): T#46 {
-    return h#99.held#11();
+  fn held#57<T#58>(h#129: Holder#1<T#58>): T#58 {
+    return h#129.held#11();
   }
 
-  fn total#47(ns#100: List#24<Int32>): Int32 {
-    var sum#101: Int32 = 0;
+  fn total#59(ns#130: List#26<Int32>): Int32 {
+    var sum#131: Int32 = 0;
     {
-      var i#102: Int32 = 0;
-      ~loop#103: while (%Int32.lt(i#102, ns#100.length#86())) {
-        sum#101 = %Int32.add(sum#101, ns#100.get#84(i#102));
-        i#102 = %Int32.add(i#102, 1);
+      var i#132: Int32 = 0;
+      ~loop#133: while (%Int32.lt(i#132, ns#130.length#107())) {
+        sum#131 = %Int32.add(sum#131, ns#130.get#105(i#132));
+        i#132 = %Int32.add(i#132, 1);
       }
     }
-    return sum#101;
+    return sum#131;
   }
 
-  let ns#48: List#24<Int32>;
+  let ns#60: List#26<Int32>;
 
-  let none#49: List#24<Int32>;
+  let none#61: List#26<Int32>;
 
-  let box#50: Box#2<String>;
+  let box#62: Box#2<String>;
 
-  let pair#51: Pair#15<String, Int32>;
+  let pair#63: Pair#15<String, Int32>;
 
-  let shelf#52: Shelf#5<Named#3>;
+  let shelf#64: Shelf#5<Named#3>;
 
-  let noNames#53: List#24<Named#3>;
+  let noNames#65: List#26<Named#3>;
 
-  let empty#54: Shelf#5<Named#3>;
+  let empty#66: Shelf#5<Named#3>;
 
-  let n#55: Int32;
+  let n#67: Int32;
 
-  let builder#58: ListBuilder#56<String>;
+  let half#68: Pair#15<Int32, List#26<AnyValue>>;
 
-  let built#59: List#24<String>;
+  let halfToo#69: Pair#15<String, List#26<AnyValue>>;
 
-  let m#68: Map#60<String, Int32>;
+  let optNone#70: AnyValue?;
 
-  let mb#72: MapBuilder#69<String, Int32?>;
+  let optSome#71: Int32?;
 
-  fn indexed#73(): Void {
-    let counts#133: ListBuilder#56<Int32> = new constructor#91<Int32>();
-    counts#133.add#113(1, omitted);
-    counts#133.add#113(10, omitted);
-    var at#134: Int32 = 0;
+  let one#72: Int32;
+
+  let two#73: Int32;
+
+  let three#74: String;
+
+  let four#75: String;
+
+  let builder#78: ListBuilder#76<String>;
+
+  let built#79: List#26<String>;
+
+  let m#88: Map#80<String, Int32>;
+
+  let mb#92: MapBuilder#89<String, Int32?>;
+
+  fn indexed#93(): Void {
+    let counts#173: ListBuilder#76<Int32> = new constructor#112<Int32>();
+    counts#173.add#155(1, omitted);
+    counts#173.add#155(10, omitted);
+    var at#174: Int32 = 0;
     {
-      let k#135: Int32 = at#134;
-      counts#133.set#136(k#135, %Int32.add(counts#133.get#98(k#135), 4));
+      let k#175: Int32 = at#174;
+      counts#173.set#176(k#175, %Int32.add(counts#173.get#128(k#175), 4));
     }
     {
-      counts#133.set#136(1, %Int32.mul(counts#133.get#98(1), 3));
+      counts#173.set#176(1, %Int32.mul(counts#173.get#128(1), 3));
     }
-    let was#137: Int32 = (value { let k#138: Int32 = (value { let t#139: Int32 = at#134; at#134 = %Int32.add(t#139, 1); t#139 }): Int32; let t#140: Int32 = counts#133.get#98(k#138); counts#133.set#136(k#138, %Int32.add(t#140, 1)); t#140 }): Int32;
-    let pre#141: Int32 = (value { let k#142: Int32 = at#134; let t#143: Int32 = %Int32.add(counts#133.get#98(k#142), 1); counts#133.set#136(k#142, t#143); t#143 }): Int32;
-    let post#144: Int32 = (value { let t#145: Int32 = counts#133.get#98(0); counts#133.set#136(0, %Int32.sub(t#145, 1)); t#145 }): Int32;
-    let down#146: Int32 = (value { let t#147: Int32 = %Int32.sub(counts#133.get#98(0), 1); counts#133.set#136(0, t#147); t#147 }): Int32;
-    ~console#106.log#105(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(was#137.toString#108(omitted), " "), pre#141.toString#108(omitted)), " "), post#144.toString#108(omitted)), " "), down#146.toString#108(omitted)), " "), at#134.toString#108(omitted)));
+    let was#177: Int32 = (value { let k#178: Int32 = (value { let t#179: Int32 = at#174; at#174 = %Int32.add(t#179, 1); t#179 }): Int32; let t#180: Int32 = counts#173.get#128(k#178); counts#173.set#176(k#178, %Int32.add(t#180, 1)); t#180 }): Int32;
+    let pre#181: Int32 = (value { let k#182: Int32 = at#174; let t#183: Int32 = %Int32.add(counts#173.get#128(k#182), 1); counts#173.set#176(k#182, t#183); t#183 }): Int32;
+    let post#184: Int32 = (value { let t#185: Int32 = counts#173.get#128(0); counts#173.set#176(0, %Int32.sub(t#185, 1)); t#185 }): Int32;
+    let down#186: Int32 = (value { let t#187: Int32 = %Int32.sub(counts#173.get#128(0), 1); counts#173.set#176(0, t#187); t#187 }): Int32;
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(was#177.toString#138(omitted), " "), pre#181.toString#138(omitted)), " "), post#184.toString#138(omitted)), " "), down#186.toString#138(omitted)), " "), at#174.toString#138(omitted)));
   }
 
-  fn both#74(): Void {
-    var x#148: Int32 = 1;
-    var y#149: Int32 = 10;
-    let locals#150: Int32 = %Int32.add((value { let t#151: Int32 = x#148; x#148 = %Int32.add(t#151, 1); t#151 }): Int32, (value { let t#152: Int32 = y#149; y#149 = %Int32.add(t#152, 1); t#152 }): Int32);
-    let p#153: Counter#4 = new constructor#23(100);
-    let q#154: Counter#4 = new constructor#23(1000);
-    let fields#155: Int32 = %Int32.add((value { let t#156: Int32 = p#153.n#22; p#153.n#22 = %Int32.add(t#156, 1); t#156 }): Int32, (value { let t#157: Int32 = q#154.n#22; q#154.n#22 = %Int32.add(t#157, 1); t#157 }): Int32);
-    let same#158: Int32 = %Int32.add((value { let t#159: Int32 = p#153.n#22; p#153.n#22 = %Int32.add(t#159, 1); t#159 }): Int32, (value { let t#160: Int32 = p#153.n#22; p#153.n#22 = %Int32.add(t#160, 1); t#160 }): Int32);
-    let a#161: ListBuilder#56<Int32> = new constructor#91<Int32>();
-    a#161.add#113(3, omitted);
-    let b#162: ListBuilder#56<Int32> = new constructor#91<Int32>();
-    b#162.add#113(30, omitted);
-    var i#163: Int32 = 0;
-    let items#164: Int32 = %Int32.add((value { let k#165: Int32 = i#163; let t#166: Int32 = a#161.get#98(k#165); a#161.set#136(k#165, %Int32.add(t#166, 1)); t#166 }): Int32, (value { let k#167: Int32 = i#163; let t#168: Int32 = b#162.get#98(k#167); b#162.set#136(k#167, %Int32.add(t#168, 1)); t#168 }): Int32);
-    ~console#106.log#105(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(locals#150.toString#108(omitted), " "), x#148.toString#108(omitted)), " "), y#149.toString#108(omitted)), " "), fields#155.toString#108(omitted)), " "), same#158.toString#108(omitted)), " "), p#153.n#22.toString#108(omitted)), " "), q#154.n#22.toString#108(omitted)), " "), items#164.toString#108(omitted)), " "), a#161.get#98(0).toString#108(omitted)), " "), b#162.get#98(0).toString#108(omitted)));
+  fn both#94(): Void {
+    var x#188: Int32 = 1;
+    var y#189: Int32 = 10;
+    let locals#190: Int32 = %Int32.add((value { let t#191: Int32 = x#188; x#188 = %Int32.add(t#191, 1); t#191 }): Int32, (value { let t#192: Int32 = y#189; y#189 = %Int32.add(t#192, 1); t#192 }): Int32);
+    let p#193: Counter#4 = new constructor#25(100);
+    let q#194: Counter#4 = new constructor#25(1000);
+    let fields#195: Int32 = %Int32.add((value { let t#196: Int32 = p#193.n#24; p#193.n#24 = %Int32.add(t#196, 1); t#196 }): Int32, (value { let t#197: Int32 = q#194.n#24; q#194.n#24 = %Int32.add(t#197, 1); t#197 }): Int32);
+    let same#198: Int32 = %Int32.add((value { let t#199: Int32 = p#193.n#24; p#193.n#24 = %Int32.add(t#199, 1); t#199 }): Int32, (value { let t#200: Int32 = p#193.n#24; p#193.n#24 = %Int32.add(t#200, 1); t#200 }): Int32);
+    let a#201: ListBuilder#76<Int32> = new constructor#112<Int32>();
+    a#201.add#155(3, omitted);
+    let b#202: ListBuilder#76<Int32> = new constructor#112<Int32>();
+    b#202.add#155(30, omitted);
+    var i#203: Int32 = 0;
+    let items#204: Int32 = %Int32.add((value { let k#205: Int32 = i#203; let t#206: Int32 = a#201.get#128(k#205); a#201.set#176(k#205, %Int32.add(t#206, 1)); t#206 }): Int32, (value { let k#207: Int32 = i#203; let t#208: Int32 = b#202.get#128(k#207); b#202.set#176(k#207, %Int32.add(t#208, 1)); t#208 }): Int32);
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(locals#190.toString#138(omitted), " "), x#188.toString#138(omitted)), " "), y#189.toString#138(omitted)), " "), fields#195.toString#138(omitted)), " "), same#198.toString#138(omitted)), " "), p#193.n#24.toString#138(omitted)), " "), q#194.n#24.toString#138(omitted)), " "), items#204.toString#138(omitted)), " "), a#201.get#128(0).toString#138(omitted)), " "), b#202.get#128(0).toString#138(omitted)));
   }
 
-  let tally#75: MapBuilder#69<String, Int32>;
+  let tally#95: MapBuilder#89<String, Int32>;
 
-  fn bump#76(key#169: String): Int32 throws Bubble {
+  fn bump#96(key#209: String): Int32 throws Bubble {
     {
-      tally#75.set#125(key#169, %Int32.sub(tally#75.get#119(key#169)^, 1));
+      tally#95.set#165(key#209, %Int32.sub(tally#95.get#161(key#209)^, 1));
     }
-    let before#170: Int32 = (value { let t#171: Int32 = tally#75.get#119(key#169)^; tally#75.set#125(key#169, %Int32.add(t#171, 1)); t#171 }): Int32;
-    let after#172: Int32 = (value { let t#173: Int32 = %Int32.add(tally#75.get#119(key#169)^, 1); tally#75.set#125(key#169, t#173); t#173 }): Int32;
-    return %Int32.add(before#170, after#172);
+    let before#210: Int32 = (value { let t#211: Int32 = tally#95.get#161(key#209)^; tally#95.set#165(key#209, %Int32.add(t#211, 1)); t#211 }): Int32;
+    let after#212: Int32 = (value { let t#213: Int32 = %Int32.add(tally#95.get#161(key#209)^, 1); tally#95.set#165(key#209, t#213); t#213 }): Int32;
+    return %Int32.add(before#210, after#212);
   }
 
-  fn firstSame#77(a#174: List#24<Int32>, b#175: List#24<Int32>): Boolean {
-    return %Int32.eq(a#174.get#84(0), b#175.get#84(0));
+  fn firstSame#97(a#214: List#26<Int32>, b#215: List#26<Int32>): Boolean {
+    return %Int32.eq(a#214.get#105(0), b#215.get#105(0));
   }
 
   init {
-    init ~console#106 = getConsole#176(omitted);
-    init ns#48 = (list(1, 2, 3)): List#24<Int32>;
-    init none#49 = (list()): List#24<Int32>;
-    ~console#106.log#105(%String.cat(%String.cat(%String.cat(%String.cat(total#47(ns#48).toString#108(omitted), " "), first#43<Int32>((upcast(ns#48)): Listed#26<Int32>, 0).toString#108(omitted)), " "), first#43<Int32>((upcast(none#49)): Listed#26<Int32>, %Int32.neg(1)).toString#108(omitted)));
-    ~console#106.log#105(first#43<String>((upcast((list("a", "b")): List#24<String>)): Listed#26<String>, "z"));
-    init box#50 = new constructor#19<String>("boxed");
-    ~console#106.log#105(held#45<String>((upcast(box#50)): Holder#1<String>));
-    init pair#51 = box#50.pairWith#18(7);
-    ~console#106.log#105(%String.cat(%String.cat(pair#51.key#109, " "), pair#51.value#110.toString#108(omitted)));
-    init shelf#52 = new constructor#32<Named#3>((list(new constructor#21("ann"), new constructor#21("bo"))): List#24<Named#3>);
-    ~console#106.log#105((value { let subject#111: String? = shelf#52.firstName#29(); (if (isNull(subject#111)) "none" else (nonNull(subject#111)): String): String }): String);
-    init noNames#53 = (list()): List#24<Named#3>;
-    init empty#54 = new constructor#32<Named#3>(noNames#53);
-    ~console#106.log#105((value { let subject#112: String? = empty#54.firstName#29(); (if (isNull(subject#112)) "none" else (nonNull(subject#112)): String): String }): String);
-    init n#55 = %Int32.add(shelf#52.tally#30<Named#3>(1), shelf#52.tally#30<Named#3>(2));
-    ~console#106.log#105(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(tagged#34<Scene#6, Int32>(4).toString#108(omitted), " "), tagged#34<Scene#6, String>("t")), " "), countOf#37<AnyValue>(3).toString#108(omitted)), " "), relayed#39<Scene#6, Int32>(5).toString#108(omitted)), " "), n#55.toString#108(omitted)));
-    init builder#58 = new constructor#91<String>();
-    builder#58.add#113("x", omitted);
-    builder#58.add#113("y", omitted);
-    builder#58.add#113("w", 0);
-    ~console#106.log#105(%String.cat(%String.cat(%String.cat(%String.cat(builder#58.length#92().toString#108(omitted), " "), builder#58.get#98(0)), " "), builder#58.removeLast#114()));
-    init built#59 = builder#58.toList#115();
-    ~console#106.log#105(%String.cat(%String.cat(%String.cat(%String.cat(built#59.length#86().toString#108(omitted), " "), built#59.getOr#116(5, "?")), " "), built#59.slice#117(1, 2).get#84(0)));
-    init m#68 = new constructor#118<String, Int32>((list(new constructor#79<String, Int32>("a", 1), new constructor#79<String, Int32>("b", 2))): List#24<Pair#15<String, Int32>>);
-    ~console#106.log#105(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(((orelse(m#68.get#119("b")^, %Int32.neg(1))): Int32).toString#108(omitted), " "), ((orelse(m#68.get#119("c")^, %Int32.neg(1))): Int32).toString#108(omitted)), " "), m#68.has#120("a").toString#122()), " "), m#68.length#123().toString#108(omitted)));
-    init mb#72 = new constructor#124<String, Int32?>();
-    mb#72.set#125("q", (asNullable(5)): Int32?);
-    mb#72.set#125("n", (null): Int32?);
-    ~console#106.log#105(%String.cat(%String.cat(%String.cat(%String.cat(((value { let subject#126: Int32? = mb#72.getOr#127("q", (asNullable(0)): Int32?); (if (isNull(subject#126)) %Int32.neg(2) else (nonNull(subject#126)): Int32): Int32 }): Int32).toString#108(omitted), " "), ((value { let subject#128: Int32? = mb#72.getOr#127("n", (asNullable(0)): Int32?); (if (isNull(subject#128)) %Int32.neg(2) else (nonNull(subject#128)): Int32): Int32 }): Int32).toString#108(omitted)), " "), mb#72.has#120("n").toString#122()));
-    ~console#106.log#105((value { let subject#129: String? = (value { let subject#130: Int32? = (orelse(mb#72.remove#131("q")^, (asNullable(0)): Int32?)): Int32?; (if (isNull(subject#130)) (null): String? else (asNullable(((nonNull(subject#130)): Int32).toString#108(omitted))): String?): String? }): String?; (if (isNull(subject#129)) "null" else (nonNull(subject#129)): String): String }): String);
-    ~console#106.log#105(mb#72.keys#132().length#97().toString#108(omitted));
-    indexed#73();
-    both#74();
-    init tally#75 = new constructor#124<String, Int32>();
-    tally#75.set#125("k", 2);
-    ~console#106.log#105(%String.cat(%String.cat(%String.cat(%String.cat(((orelse(bump#76("k")^, %Int32.neg(1))): Int32).toString#108(omitted), " "), ((orelse(bump#76("z")^, %Int32.neg(1))): Int32).toString#108(omitted)), " "), ((orelse(tally#75.get#119("k")^, %Int32.neg(1))): Int32).toString#108(omitted)));
-    ~console#106.log#105(%String.cat(%String.cat(firstSame#77((list(1000)): List#24<Int32>, (list(1000)): List#24<Int32>).toString#122(), " "), firstSame#77((list(1000)): List#24<Int32>, (list(7)): List#24<Int32>).toString#122()));
+    init ~console#136 = getConsole#216(omitted);
+    init ns#60 = (list(1, 2, 3)): List#26<Int32>;
+    init none#61 = (list()): List#26<Int32>;
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(total#59(ns#60).toString#138(omitted), " "), first#55<Int32>((upcast(ns#60)): Listed#28<Int32>, 0).toString#138(omitted)), " "), first#55<Int32>((upcast(none#61)): Listed#28<Int32>, %Int32.neg(1)).toString#138(omitted)));
+    ~console#136.log#135(first#55<String>((upcast((list("a", "b")): List#26<String>)): Listed#28<String>, "z"));
+    init box#62 = new constructor#21<String>("boxed");
+    ~console#136.log#135(held#57<String>((upcast(box#62)): Holder#1<String>));
+    init pair#63 = box#62.pairWith#18(7);
+    ~console#136.log#135(%String.cat(%String.cat(pair#63.key#139, " "), pair#63.value#140.toString#138(omitted)));
+    init shelf#64 = new constructor#34<Named#3>((list(new constructor#23("ann"), new constructor#23("bo"))): List#26<Named#3>);
+    ~console#136.log#135((value { let subject#141: String? = shelf#64.firstName#31(); (if (isNull(subject#141)) "none" else (nonNull(subject#141)): String): String }): String);
+    init noNames#65 = (list()): List#26<Named#3>;
+    init empty#66 = new constructor#34<Named#3>(noNames#65);
+    ~console#136.log#135((value { let subject#142: String? = empty#66.firstName#31(); (if (isNull(subject#142)) "none" else (nonNull(subject#142)): String): String }): String);
+    init n#67 = %Int32.add(shelf#64.tally#32<Named#3>(1), shelf#64.tally#32<Named#3>(2));
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(tagged#36<Scene#6, Int32>(4).toString#138(omitted), " "), tagged#36<Scene#6, String>("t")), " "), countOf#39<AnyValue>(3).toString#138(omitted)), " "), relayed#41<Stage#7, Int32>(5).toString#138(omitted)), " "), n#67.toString#138(omitted)));
+    init half#68 = halfPair#44<Int32, AnyValue>(8);
+    init halfToo#69 = halfPair#44<String, AnyValue>("h");
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(half#68.key#139.toString#138(omitted), " "), half#68.value#140.length#107().toString#138(omitted)), " "), halfToo#69.key#139));
+    init optNone#70 = opt#47<AnyValue>((null): AnyValue?);
+    init optSome#71 = opt#47<Int32>((asNullable(6)): Int32?);
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(isNull(optNone#70).toString#144(), " "), ((if (isNull(optSome#71)) 0 else (nonNull(optSome#71)): Int32): Int32).toString#138(omitted)), " "), (value { let subject#145: String? = opt#47<String>((null): String?); (if (isNull(subject#145)) "-" else (nonNull(subject#145)): String): String }): String));
+    init one#72 = scaled#49<Int32>(2, (fn ~fn#146(y#147: Int32): Int32 {
+      return %Int32.add(y#147, 1);
+    }): fn (Int32): Int32, omitted);
+    init two#73 = scaled#49<Int32>(2, (fn ~fn#148(y#149: Int32): Int32 {
+      return %Int32.mul(y#149, 2);
+    }): fn (Int32): Int32, (asNullable(10)): Int32?);
+    init three#74 = joined#51<Int32, String>(3, "s", (fn ~fn#150(a#151: Int32, b#152: String): String {
+      return %String.cat(a#151.toString#138(omitted), b#152);
+    }): fn (Int32, String): String);
+    init four#75 = box#62.applied#19<String>((fn ~fn#153(s#154: String): String {
+      return %String.cat(s#154, "!");
+    }): fn (String): String);
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(one#72.toString#138(omitted), " "), two#73.toString#138(omitted)), " "), three#74), " "), four#75));
+    init builder#78 = new constructor#112<String>();
+    builder#78.add#155("x", omitted);
+    builder#78.add#155("y", omitted);
+    builder#78.add#155("w", 0);
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(builder#78.length#113().toString#138(omitted), " "), builder#78.get#128(0)), " "), builder#78.removeLast#156()));
+    init built#79 = builder#78.toList#157();
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(built#79.length#107().toString#138(omitted), " "), built#79.getOr#158(5, "?")), " "), built#79.slice#159(1, 2).get#105(0)));
+    init m#88 = new constructor#160<String, Int32>((list(new constructor#99<String, Int32>("a", 1), new constructor#99<String, Int32>("b", 2))): List#26<Pair#15<String, Int32>>);
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(((orelse(m#88.get#161("b")^, %Int32.neg(1))): Int32).toString#138(omitted), " "), ((orelse(m#88.get#161("c")^, %Int32.neg(1))): Int32).toString#138(omitted)), " "), m#88.has#162("a").toString#144()), " "), m#88.length#163().toString#138(omitted)));
+    init mb#92 = new constructor#164<String, Int32?>();
+    mb#92.set#165("q", (asNullable(5)): Int32?);
+    mb#92.set#165("n", (null): Int32?);
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(((value { let subject#166: Int32? = mb#92.getOr#167("q", (asNullable(0)): Int32?); (if (isNull(subject#166)) %Int32.neg(2) else (nonNull(subject#166)): Int32): Int32 }): Int32).toString#138(omitted), " "), ((value { let subject#168: Int32? = mb#92.getOr#167("n", (asNullable(0)): Int32?); (if (isNull(subject#168)) %Int32.neg(2) else (nonNull(subject#168)): Int32): Int32 }): Int32).toString#138(omitted)), " "), mb#92.has#162("n").toString#144()));
+    ~console#136.log#135((value { let subject#169: String? = (value { let subject#170: Int32? = (orelse(mb#92.remove#171("q")^, (asNullable(0)): Int32?)): Int32?; (if (isNull(subject#170)) (null): String? else (asNullable(((nonNull(subject#170)): Int32).toString#138(omitted))): String?): String? }): String?; (if (isNull(subject#169)) "null" else (nonNull(subject#169)): String): String }): String);
+    ~console#136.log#135(mb#92.keys#172().length#127().toString#138(omitted));
+    indexed#93();
+    both#94();
+    init tally#95 = new constructor#164<String, Int32>();
+    tally#95.set#165("k", 2);
+    ~console#136.log#135(%String.cat(%String.cat(%String.cat(%String.cat(((orelse(bump#96("k")^, %Int32.neg(1))): Int32).toString#138(omitted), " "), ((orelse(bump#96("z")^, %Int32.neg(1))): Int32).toString#138(omitted)), " "), ((orelse(tally#95.get#161("k")^, %Int32.neg(1))): Int32).toString#138(omitted)));
+    ~console#136.log#135(%String.cat(%String.cat(firstSame#97((list(1000)): List#26<Int32>, (list(1000)): List#26<Int32>).toString#144(), " "), firstSame#97((list(1000)): List#26<Int32>, (list(7)): List#26<Int32>).toString#144()));
   }
 }

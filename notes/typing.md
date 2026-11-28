@@ -180,22 +180,30 @@ with `is` checks (`if (!(i is D)) { return; }; takeD(i)`):
 
 ## Type parameters are invariant
 
-Temper plans to make all type parameters invariant, because C++ and Rust,
-among others, can't express variance well. Tempest doesn't support
-covariant or contravariant type parameters at all: `List<Sub>` is never a
-`List<Super>`. Kotlin Temper's `@out` and `@in` annotations (about a dozen,
-all in `core.temper`, as on `Generator<@out YIELD>`) parse as ordinary
-decorations and are ignored, with no error. When copying `core.temper` and
-the `std` library from Kotlin Temper, keep them as they are, so the files
-stay easy to diff, and rely on this rule. Decided (2026-10-28): tempest
-stays invariant, and Kotlin Temper should change to match
-([kotlin-differences.md](kotlin-differences.md)). Until then, tempest
-doesn't report what only variance accepts (below), so it gives no false
-errors; once it's known what code relies on `@out` and `@in`, it can.
+Every type parameter is invariant, because C++ and Rust, among others,
+can't express variance well: `List<Sub>` is never a `List<Super>`, nor a
+`Box<Sub>` a `Box<Super>`. One generic type is another only where, as
+the supertype with the other's base, it has the same arguments
+("Generic types", below). Decided 2026-10-28; reported since 2026-11-26,
+once a census found nothing in core, std, the tests, or the showcase
+libraries that relied on variance.
+
+- **`@out` and `@in`** are gone, core's included: nothing gives them a
+  meaning, and on a type parameter they're ignored, as any other
+  decorator there is.
+- **`Never<T>`** has its own rule, not variance: a `Never<A>` is a
+  `Never<B>` where an `A` is a `B` ("Never", below).
+- **Migrating** code that relied on variance: take a `List<T>` for `<T
+  extends Super>` instead of a `List<Super>` (a generic function), or
+  build the `List<Super>` in the first place (a list literal takes its
+  element type from the type wanted).
+
+Kotlin Temper honors `@out` and `@in`, and should drop them
+([kotlin-differences.md](kotlin-differences.md)).
 
 ### To explore later: variance without runtime variance
 
-Both ideas only accept more programs, so neither conflicts with starting
+Both ideas only accept more programs, so neither conflicts with being
 invariant.
 
 1. **Use-site sugar for bounded generics.** Most wanted covariance is
@@ -222,9 +230,10 @@ invariant.
    interpreter runs them as built-in list methods (`interp.rs`), exercised
    by `types/list/reduce` and `imports/functions`.
 2. **Adapters inserted at conversions,** for what's left: wrap a function
-   value to accept a narrower argument (O(1), always valid); wrap an `@out`
-   read-only interface in a view that upcasts elements on access, or an
-   `@in` one in a view that upcasts inputs. The compiler knows each concrete
+   value to accept a narrower argument (O(1), always valid); wrap a
+   read-only (covariant) interface in a view that upcasts elements on
+   access, or a write-only (contravariant) one in a view that upcasts
+   inputs. The compiler knows each concrete
    cast, so it can emit it as a closure, which works in stable Rust; C++ can
    use converting constructors like `shared_ptr`'s. Costs: an allocation per
    conversion, dynamic dispatch on every access, and a view that isn't the
@@ -239,9 +248,27 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
 
 - **Written types:** `List<Int>`, `Map<String, Int>` and `Box<String>`
   for a user's `class Box<T>` are generic types given arguments, shown
-  in messages as written, `List<Int32>`. A class given the wrong number
-  of arguments, a final builtin type given any, and `Never<T>` are
-  unknown for now, as is a bare generic class, `Box`.
+  in messages as written, `List<Int32>`. A type given the wrong number
+  of arguments, as `Map<Int>`, `Int<String>`, or `Box<Int, Int>`, is
+  unknown, and "Wrong number of type arguments.  Expected 2" wherever
+  it's written (annotations, type arguments, supertypes, bounds, `is`
+  and `as`, aliases; for `new`, at the call, "Generic calls", below),
+  as many as core or the library declares, which Kotlin misses
+  (2026-11-26). A generic type written without arguments, `List` or
+  `Box`, or with only the leading ones, `P<Int>` for `class P<A, B>`,
+  takes the rest from a variable's value, as Kotlin does: `let b: Box =
+  new Box(1)` is a `Box<Int32>`, `let xs: Listed = [1]` a
+  `Listed<Int32>` (the value's type as that supertype), and `let p:
+  P<Int> = new P(1, "s")` a `P<Int32, String>`, those written as
+  written, so `new P("a", "s")` doesn't fit (Kotlin takes the value's
+  type whole). Elsewhere, and where the value isn't one, it's "Expected
+  1": a `let` with no value,
+  a parameter (with a default too), a field (with an initializer too,
+  as fields are typed from their annotation alone), return types,
+  supertypes, bounds, `is` and `as`, and inside another type (`Box?`,
+  `P<Int>?`), through an alias too (`let A = Box` used as a type). Too
+  many is an error everywhere. `new Box(1)`,
+  `Box.make()`, and `{ class: Box, … }` name no type.
 - **Type parameters:** `T`, in a function's or class's body, is a type
   of its own, a subtype of its bound only: `AnyValue` if it has none, or
   the type it `extends`. So a `T` is an `AnyValue` and a `T?`, but not an
@@ -250,13 +277,13 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
   itself a type parameter, as in `<T, U extends T>`, is unknown for now,
   so whether a `U` is a `T` goes unreported.
 - **Arguments:** one generic type given arguments is another only if
-  they're the same type. Since Kotlin Temper honors `@out` and `@in`
-  (`List<@out T>`), where tempest's parameters are invariant ("Type
-  parameters are invariant", above), a mismatch is reported only where
-  the bases are the same and some pair of arguments is unrelated, neither
-  a subtype of the other, which no variance accepts: `List<Int32>` isn't
-  a `List<String>`, nor `List<T>` a `List<Int32>`, but `List<Dog>` as a
-  `List<Animal>`, or `List<Int32?>` as a `List<Int32>`, isn't reported.
+  they're the same type, as type parameters are invariant ("Type
+  parameters are invariant", above): `List<Int32>` isn't a
+  `List<String>`, nor a `List<Dog>` a `List<Animal>` or a
+  `List<Int32?>`, nor a `Box<Dog>` a `Box<Animal>`, nor a `List<Dog>`
+  (seen as a `Listed<Dog>`) a `Listed<Animal>` (2026-11-26). Where an
+  argument isn't worked out, it's a mismatch only if some argument can't
+  be the other's.
 - **Builtin supertypes,** as core declares them: `List<T>` and
   `ListBuilder<T>` are `Listed<T>`s, `Map<K, V>` and `MapBuilder<K, V>`
   are `Mapped<K, V>`s, `SafeGenerator<T>` is a `Generator<T>`,
@@ -299,10 +326,9 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
   `class StrHolder extends Holder<String>`, `sh.describe(x)`, declared
   in `Holder<T>` as `describe(x: T): String`, takes a `String`. A
   static member sees its class's type parameters as unknown, and a bare
-  member name in the class sees them as written. A bare generic class, `Box`, is still unknown, as
-  are core's generic classes declared in Temper, which are builtin
-  types, whose members are typed from core's signatures ("Builtin
-  types' members", below).
+  member name in the class sees them as written. Core's generic
+  classes declared in Temper are builtin types, whose members are
+  typed from core's signatures ("Builtin types' members", below).
 - **Narrowing:** `x is D` narrows a `T` to `D` where `D` is a subtype of
   `T`'s bound, as for a downcast of the bound.
 - **Run-time checks** of generic types and type parameters' values are
@@ -323,9 +349,13 @@ for core's `Listed.map<O>(transform: fn (T): O): List<O>`, likewise,
 with the method inherited as the receiver's type sees it ("Builtin
 types' members", below); status in [milestone-4.md](history/milestone-4.md).
 
-- **Solving:** with as many type arguments as the function has type
-  parameters, each binds to its argument, `T` to `Int32` in
-  `id<Int>(x)`; with another number of them, none binds. Without type
+- **Solving:** type arguments bind the leading type parameters, `T` to
+  `Int32` in `id<Int>(x)`; those they leave, as `B` in `pair<Int>(1,
+  "s")`, are solved as without any, from the arguments and the type
+  wanted, as Kotlin does, and one nothing binds takes its bound as it
+  would then ("Unsolved", below). With too many, none binds, and the call is "Wrong number of
+  type arguments.  Expected 3", at the call, which Kotlin misses
+  (2026-11-26). Without type
   arguments, each argument's type is matched against its parameter's,
   part by part: `T` from `Int32`, `List<T>` from `List<Int32>`, or from
   a subtype as it sees that supertype ("Users' supertypes", above), as
@@ -334,21 +364,82 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   non-generic class's supertype, a bug:
   [kotlin-differences.md](kotlin-differences.md#bugs-in-kotlin-temper)), `T?`
   from `Int32?` or `Int32`, and function types' parameters and results.
-  A type parameter matched to two different types is left unknown,
-  since Kotlin may find a common supertype (`pair(1, "a")` passes there),
-  unless one is the other made nullable, as `Dog` and `Dog?` bind `Dog?`.
-  Only fully known types bind: not null, `Never`, `Void`, or a function
+  A type parameter matched to two different types binds to their join
+  ("Joins", below), or `AnyValue` (made nullable if either is) where
+  they have none, as Kotlin's least upper bound: `Dog` and `Dog?` bind
+  `Dog?`, `Dog` and `Cat` bind `Animal`, `Int32` and null `Int32?`, and
+  `Two<Int32>` and `Two<String>` `AnyValue`, so a call's type is never
+  left unknown by this (2026-11-26; before, it was, and backends failed
+  on it). But a join may not go above a type core marks
+  `@mayDowncastTo(false)` (`Types::no_downcast`, as for `is`; "Run-time
+  type checks", below), whose values may not be told apart once joined:
+  `Int32` and `String` (or `Float64`), `List<Int32>` and
+  `List<String>`, and even `List<Int32>` and `Listed<Int32>` are an
+  error at the call ("Errors", below), as is `c3 = pair(1, "a")`. Being
+  nullable isn't a step up (`Int32` and `Int32?`). Kotlin accepts them
+  all, as `AnyValue` (or the join). Type arguments are never limited
+  (`new Two<AnyValue>(1, "s")`, and `pick<AnyValue>(1, "s")` where
+  Kotlin would fold the call), nor is a type wanted that binds the
+  type parameter (`let t: Two<AnyValue> = new Two(1, "s")`; "From the
+  type wanted", below). A user's type's own `@mayDowncastTo(false)`
+  isn't read yet, for `is` either. Only where a parameter's whole type
+  is `T` or `T?` are bindings joined: inside another type (`List<T>`,
+  `fn (): T`, `Box<T>`), where type parameters are invariant, the first
+  binding stays, so `lst(dogs, cats)` for `lst<T>(a: List<T>, b:
+  List<T>)` is "… expected [List<Dog>, List<Dog>], but got [List<Dog>,
+  List<Cat>]", and `k(xs, s)` for `k<T>(xs: List<T>, x: T)` and `xs:
+  List<Int>` reports the `s` (2026-11-27; before, `T` bound `Animal`,
+  and tmpl rejected the call). A list literal argument's element type
+  is as a whole `T`, as the literal takes the type it's wanted as
+  (`lst([new Dog()], [new Cat()])` binds `Animal`); its elements that
+  can't be told apart once joined (`["a", 3]`) are a clash of what each
+  would bind, so `new Box(["a", 3])` is "T is bound to both
+  List<String> and List<Int32>, …". Only fully known
+  types bind: not null alone, `Never`, `Void`, or a function
   literal's type, which takes its own from the solved call ("Function
-  literals and target typing", below). A nullable type binds a bare `T`,
+  literals and target typing", below). Null passed alone for a bare `T`
+  (not `T?`) is checked against what `T` is solved as, its bound if
+  nothing else binds it, so `id(null)` is "Expected subtype of
+  AnyValue, but got AnyValue?" at the null, as in Kotlin, and `let n:
+  Int? = id(null)` is "Expected subtype of Int32, but got Int32?"; `T`
+  is then that made nullable, so the call still translates
+  (2026-11-27; before, tmpl rejected `id(null)` with no error). With
+  type arguments, null misfits as any argument does. A nullable type binds a bare `T`,
   as in Kotlin, so `pick(d)` for a `d: Dog?` and `pick<T extends
   Animal>` is "Type formal <T extends Animal> cannot bind to Dog?",
-  while it fits an `AnyValue` bound. What doesn't bind is unknown.
+  while it fits an `AnyValue` bound. What doesn't bind is solved as
+  "Unsolved", below, says.
 - **Folding:** Kotlin folds a call of constants (`may_fold`) to its
   value before checking it, so such a call with type arguments is solved
   from its arguments instead, as its value's type would be: `let s:
   String = id<Int>("a")` passes, and `let n: Int = id<Int>("a")` is
-  "Cannot assign to Int32 from String". A constructor's or method's call
-  isn't folded.
+  "Cannot assign to Int32 from String". The type arguments still bind
+  what the arguments leave, so `make<Int, String>(1)` for `make<A,
+  B>(a: A): P<A, B?>` is a `P<Int32, String?>`, as in Kotlin, and
+  `relayed<Stage, Int>(5)` passes `Stage` on (2026-11-26; before, tmpl
+  got `S`'s bound). A constructor's or method's call isn't folded.
+- **Unsolved:** a type parameter that nothing above binds takes its
+  bound, as Kotlin's solver binds it: the bound as declared, or
+  `AnyValue`, with what the others bind put in. So `make(1)` and
+  `make<Int>(1)` are a `P<Int32, AnyValue?>`, `B extends Animal` gives
+  `P<Int32, Animal?>`, `none()` for `none<T>(): List<T>` is a
+  `List<AnyValue>`, and `U` in `below<T, U extends T>(x: T): List<U>`
+  binds to what `T` does. Uses are then checked against that: `let o =
+  make(1); let p: P<Int, Int> = o;` is "Cannot assign to P<Int32,
+  Int32> from P<Int32, AnyValue?>", as in Kotlin (where the call's own
+  place wants a type, that binds it first). The same goes
+  for one nothing at the call can name (`CONTEXT` in
+  `combine<CONTEXT extends Context, T>(x: T): T`, or an unused `E` after
+  `throws`). Only where an argument's type isn't known (an error of
+  its own), with too many type arguments, or with a bound naming the
+  type parameter itself (`K extends MapKey<K>`), does one stay unknown
+  (`Settle::bind_unsolved`; 2026-11-26, t1191; before, it stayed
+  unknown, and every backend failed with "an expression of unknown
+  type"). The last is an error, "Could not infer type actuals for <T
+  extends Ord<T>>() -> List<T> given [] in context unknown", at the
+  call, as in Kotlin, with the type wanted as the context (2026-11-27).
+  Checks of the call's own arguments still see it as before
+  ("Errors", below).
 - **From the type wanted:** where a call's value is stored in a
   declaration with a type or a field, returned, given as a function's
   result, or assigned, and its type doesn't fit the type wanted there, the type
@@ -365,7 +456,20 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   that's an argument, where Kotlin misses the error and tempest reports
   the argument as for any call ("Expected subtype of List<String>, but
   got List<Int32>"). If no argument is reported, the place's error is,
-  as before.
+  as before. The call's arguments are always checked against what
+  types the call: where they leave a type parameter unknown, what the
+  type wanted binds, at an argument too, so `let b: Box<List<String>> =
+  new Box(["a", 3])` reports the `3` (2026-11-26). So does a type
+  parameter whose arguments' join would go above a
+  `@mayDowncastTo(false)` type, bare or not: `let t: Two<AnyValue> =
+  new Two(1, "s")` and `let a: AnyValue = pair(1, "s")` pass, and `let
+  w: Two<Int> = new Two(1, "s")` reports the `"s"`. A `let`'s leading
+  type arguments are a type wanted with the rest unknown, so `let p:
+  P<Int?> = new P(null, "s")` binds `A` to `Int32?` (2026-11-27). The
+  type wanted binds only what the arguments leave, so `let b:
+  Box<Animal> = new Box(new Dog())` is "Cannot assign to Box<Animal>
+  from Box<Dog>" under invariance, where Kotlin lets the type wanted
+  bind it; write `new Box<Animal>(…)`.
 - **The call's type** is the function's result with the bindings put
   in, so `let c: String = id(1)` is "Cannot assign to String from
   Int32".
@@ -384,7 +488,11 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got
   [Int32, String]", from the first argument that doesn't fit to the
   last, judged as other calls' arguments are (null shown as the wanted
-  type made nullable). A function literal argument is checked so only
+  type made nullable). Before the bound and the arguments, a join
+  above a `@mayDowncastTo(false)` type ("Generic calls", above): "T is
+  bound to both Int32 and String, which can't be told apart once
+  joined; give T explicitly", at the call, and then nothing else for
+  the call; Kotlin has no such error. A function literal argument is checked so only
   where it declares its result type and isn't a trailing block that
   moves, as Kotlin checks it: `let b: List<Int> = ls.map(fn (x: Int):
   String { … })` is "… expected [Listed<Int32>, fn (Int32): Int32], but
@@ -401,8 +509,8 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   a `fn (Int32): AnyValue`, and an expected list shows it so; but it's
   checked so only where every argument's type is known and none is
   `null` or `Void`, which Kotlin reports otherwise, and not where
-  arguments bind it two ways or the call gives the wrong number of type
-  arguments, nor where its bound names the function's type parameters.
+  the call gives the wrong number of type arguments, nor where its
+  bound names the function's type parameters.
   A method's explicit type arguments bind
   as a function's do, where Kotlin fails
   ([kotlin-differences.md](kotlin-differences.md#bugs-in-kotlin-temper)).
@@ -421,7 +529,10 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   expressions, as `let m: Map<P, String>`, as Kotlin doesn't either.
 - **Not yet:** Kotlin's choice among two ways arguments bind a type
   parameter, as `ls.reduceFrom(0, addS)` for `addS(a: String, x: Int):
-  String`, where Kotlin binds `O` to `String` and reports the `0`.
+  String`, where Kotlin binds `O` to `String` and reports the `0`;
+  tempest's join of `Int32` and `String` would go above
+  `@mayDowncastTo(false)` types, so it binds `O` from the type wanted, if
+  any, and reports `addS`, or else reports the join.
 
 ## Target typing: where it applies
 
@@ -466,22 +577,36 @@ listT, …) -> List<listT>`, solved per call.
   for an undeclared local's initializer or a builtin operator's
   operand, none.
 - **A list literal's type** is a `List<E>`. Where the type wanted is a
-  `List<X>` or `Listed<X>`, maybe nullable, with `X` fully known, and
-  every element is known to be an `X`, `E` is `X`: so `[]` is a
+  `List<X>`, maybe nullable, with `X` fully known, and every element is
+  known to be an `X`, `E` is `X`: so `[]` is a
   `List<Int32>` in `let xs: List<Int> = []`, and `[d]`, for a `d: Dog`,
   a `List<Animal>` in `let xs: List<Animal> = [d]`, as backends need
-  where lists aren't covariant. Otherwise `E` is the elements' common
+  where lists aren't covariant. A `Listed<X>` wanted gives `E` only for
+  `[]`: as in Kotlin, by design, `[new A(1)]` where a `Listed<P>` is
+  wanted is a `List<A>`, which isn't a `Listed<P>` ("Generic types",
+  above): "Expected subtype of Listed<P>, but got List<A>" (2026-11-26).
+  Otherwise `E` is the elements' common
   type: their type, if they're all of one; made nullable if any is null
   or nullable (`[n, 1]`, for `n: Int?`, is a `List<Int32?>`); the type
   the others are subtypes of (`[d, a]`, for `a: Animal`, is a
   `List<Animal>`); with an element that never returns, as `panic()`,
-  counting for nothing. Where there's none of these, as for `[d, c]`
-  with `c: Cat`, `[1, "a"]`, an empty list, or a `Void` element, `E` is
-  unknown, where Kotlin finds a common supertype, or `AnyValue`.
+  counting for nothing; else their join (`[d, c]` with `c: Cat` is a
+  `List<Animal>`), or `AnyValue`, as for a call of `<listT>(listT, …) ->
+  List<listT>` ("Generic calls", above), so `[1, "a"]` is a
+  `List<AnyValue>` and "listT is bound to both Int32 and String, which
+  can't be told apart once joined; give listT explicitly", at the list,
+  where Kotlin accepts it, but for an argument of a generic call, which
+  reports it, and `[d, new Rock()]` is a `List<AnyValue>`. With
+  nothing else, as for `[]`, `E` is its bound, `AnyValue`, as in Kotlin,
+  so `let xs: List = []` is a `List<AnyValue>`; for only null, as
+  `[null]`, `AnyValue?`, and "Expected subtype of AnyValue, but got
+  AnyValue?" at each null, as Kotlin reports it (2026-11-27; before,
+  these were unknown, and backends failed). A `Void` element, an error
+  itself, leaves `E` unknown.
 - **Errors,** in Kotlin's words and at its positions: where a
   declaration's or field's initializer, a value assigned, a value
-  returned, or a function's result is a list literal and the type wanted
-  there is a `List<X>` or `Listed<X>`, elements that can't be an `X`,
+  returned, a function's result, or an argument is a list literal and the type wanted
+  there is a `List<X>` or `Listed<X>`, maybe nullable, elements that can't be an `X`,
   judged as arguments are (null shown as `X?`), are "Actual arguments do
   not match signature: <listT extends AnyValue>(listT, listT) ->
   List<listT> expected [String, String], but got [Int32, String]", from
@@ -489,11 +614,14 @@ listT, …) -> List<listT>`, solved per call.
   lists, only the outer one is checked so, as Kotlin does: `let xss:
   List<List<String>> = [["a"], [1]]` reports `[1]`, "expected
   [List<String>, List<String>], but got [List<String>, List<Int32>]".
-  Elsewhere a list literal is checked as any value is, by its type:
-  "Cannot assign to Int32 from List<Int32>" for `let n: Int = [1]`, and
-  as an argument, "Expected subtype of List<String>, but got
-  List<Int32>" for `g([1])`, which Kotlin misses, as for generic calls
-  that are arguments.
+  A generic call's list literal argument is checked so where its
+  elements have no common type (`["a", 3]`), else as a whole, by the
+  call. Elsewhere a list literal is checked as any value is, by its
+  type: "Cannot assign to Int32 from List<Int32>" for `let n: Int =
+  [1]`. Kotlin misses an argument's elements, as in `g([1])` or
+  `g(["a", 3])`, or for a constructor's reports "Expected subtype of
+  List<String>, but got List<AnyValue>"; tempest reports the elements
+  (2026-11-26).
 
 ## Function literals and target typing
 
@@ -516,8 +644,9 @@ milestone 4's target typing slice; status in
   [kotlin-differences.md](kotlin-differences.md#bugs-in-kotlin-temper)).
   Any function literal last counts, in parentheses too, as in Kotlin.
   Typing places the arguments of every call it checks so: functions',
-  methods', and constructors', and generic ones, but not a call with
-  named or type arguments. The interpreter passes them as typing placed
+  methods', and constructors', and generic ones, past any type
+  arguments, all or leading (`calc<Int>(2) { … }`), but not a call with
+  named arguments. The interpreter passes them as typing placed
   them (`Typing::trailing_blocks`), null for those skipped; a call
   typing can't place, as of a callee whose type it doesn't know, passes
   them as written.
@@ -538,7 +667,9 @@ milestone 4's target typing slice; status in
   the call's result is a bare `T` or `T?`; a type parameter that none
   of these binds stays unknown. So in `ls.map { x => … }`, for `ls:
   List<Int>`, `x` is an `Int32`, and in `let ys: List<String> =
-  ls.map { x => … }` the result wanted is a `String`. A nullable type
+  ls.map { x => … }` the result wanted is a `String`; in `each<Int>(1)
+  { y => … }`, for `let each<T>(x: T, f: fn (T): Int)`, `y` is an
+  `Int32`, with or without the `1`'s help. A nullable type
   wanted counts as its non-null type, and a `@fun` interface as the
   function type it stands for ("Fun interfaces", below). Not a
   generator's factory. A `for … of` body is typed as `forEach`'s block,
@@ -786,7 +917,7 @@ P(x: Int): Boolean;`: `@fun` is metadata plus the `apply` convention.
 ## `Never<T>`: bottom with a fallback
 
 Temper has no single bottom type. `core.temper` declares
-`sealed interface Never<@out T>`, and the `T` says what a backend
+`sealed interface Never<T>`, and the `T` says what a backend
 without a bottom type (Java, C#, C++, …) should write in its place:
 `Never<String>` becomes `String` there, and a bottom type where there is
 one. These are Kotlin Temper's rules (`type2/TypeContext2.kt`,
@@ -817,24 +948,17 @@ one. These are Kotlin Temper's rules (`type2/TypeContext2.kt`,
 - **Errors Kotlin means to add** (TODOs there): `Never<Never<T>>`
   written out, and `<T extends Never<T>>`.
 
-**Tempest today** has one bottom, `TypeData::Never` (`types.rs`), a
-subtype of every type, used for `return`, `panic()`, and the like and
-for a bare `Never`. A written `Never<String>` is `Never` for now, as
-std's `bail(): Never<Void> throws Bubble`. Both accept everything Kotlin accepts,
-since Kotlin's `Never<T>` is a subtype of fewer types, but a backend
-can't get its fallback type, and a `Never<A>` used as an unrelated `B`
-isn't reported. Before code generation (milestone 5), or reporting that,
-`Never` should carry its `T`, with the rules above, likely alongside the
-generics slice in [milestone-4.md](history/milestone-4.md).
+**Tempest** follows these rules with `TypeData::NeverOf` (`types.rs`),
+and has `TypeData::Never`, a subtype of every type, for what never
+completes, as `return`.
 
-**Open: is `Never` covariant?** Kotlin honors its `@out`, so there
-`Never<Sub>` is a `Never<Super>`; tempest ignores `@out` (above). Only
-that one relation depends on it: `Never<Sub>` is still a `Sub`, and so a
-`Super`, either way. Making `Never` the one exception looks safe, since
-it has no values for variance to go wrong on, and a backend's fallback
-`Sub` to `Super` is an ordinary upcast. Not yet decided; if `Never`
-stays invariant, code relying on it would become an error that Kotlin
-doesn't report.
+**`Never<Sub>` is a `Never<Super>`,** by `Never`'s own rule, not
+variance, which tempest doesn't have ("Type parameters are invariant",
+above): it has no values for anything to go wrong on, and a backend's
+fallback `Sub` to `Super` is an ordinary upcast (2026-11-26). Kotlin
+gets the same from its core's `Never<@out T>`. A `Never<Super>` isn't a
+`Never<Sub>`, and a `Never<List<Dog>>` isn't a `Never<List<Animal>>`, as
+a `List<Dog>` isn't a `List<Animal>`.
 
 ## Inference
 
@@ -872,7 +996,10 @@ where one is null or nullable; and for two classes or interfaces (or
 builtin types, as `List` and `ListBuilder`), the one supertype of both
 that's below every other, with the same type arguments for both, as
 `E` for an `A` and a `B` that both extend `E` (2026-11-06). Where there's
-no such one, or two, it's unknown, a gap rather than a guess.
+no such one, or two, it's unknown, a gap rather than a guess, except
+for a generic call's type parameter and a list literal's elements,
+which join to `AnyValue` then (`Types::join_or_any`), an error where
+that's above a `@mayDowncastTo(false)` type ("Generic calls", above).
 
 With nothing wanted, a branch that's `[]` takes the other branch's list
 type, as Kotlin's solver finds it: `when (b) { is H -> b.kids; else ->
@@ -1104,7 +1231,10 @@ extends, theirs and so on, and nothing else. An interface's values may
 be of a class that also extends something else, but as in Kotlin, using
 one as that needs an `is` check to narrow it first (`if (i is D) {
 takeD(i) }`), so `let d: D = i` and `let j: J = i` are errors. Neither is a final builtin type's value an instance
-of a class, nor null a non-nullable one's. A function is a `@fun`
+of a class, nor null a non-nullable one's. Nor is an `AnyValue` any
+narrower type's value, though it may hold one: `let n: Int = a`, for
+`a: AnyValue`, is "Cannot assign to Int32 from AnyValue", as in Kotlin
+(2026-11-26; before, tempest let it pass). A function is a `@fun`
 interface's value where its type fits, and no other class's or
 interface's ("Fun interfaces", above).
 
@@ -1198,13 +1328,12 @@ Decided 2026-11-06, as Kotlin Temper does (`Typer.kt`,
   and `null` to `appendString(x: String?)`. The expected type plays
   no part. Where none fits or none is most specific, the call stays
   unresolved, as before; Kotlin reports "No callee matches".
-- **Generic arguments** (2026-11-06), as Kotlin's `@out` on `List`
-  decides them, though tempest's subtyping leaves them unknown
-  ("Generic types"): a `List<String?>` doesn't fit a `List<String>`
-  parameter, and of two that fit, `List<String>` is more specific than
-  `List<String?>`. A class whose supertypes are all known isn't a
-  builtin generic type it doesn't extend, so a `Name` doesn't fit a
-  `List<Boolean>` parameter either (`types.rs`, `generic_subtype`).
+- **Generic arguments,** as subtyping judges them ("Generic types"):
+  a `List<String?>` doesn't fit a `List<String>` parameter, nor a
+  `List<String>` a `List<String?>` one. A class whose supertypes are
+  all known isn't a builtin generic type it doesn't extend, so a `Name`
+  doesn't fit a `List<Boolean>` parameter either (`types.rs`,
+  `generic_subtype`).
 - **Rewriting:** the call's key then names the method, `c.appendInt(x)`,
   as Kotlin's `SimplifyDotHelper` rewrites it, so the interpreter, tmpl,
   and every backend call it by its own name, matching Kotlin's
@@ -1337,12 +1466,11 @@ In order, the first that applies:
    way to check, as `x is Box<Int>` for `x: AnyValue`, but not
    `Box<T>` from `Sup<T>`: "Type arguments cannot be introduced with is
    or as runtime type checks, because a type argument's run-time type
-   can't be checked: <[Box<Int32>]> from AnyValue". As in Kotlin, an
-   argument of a parameter marked `@out` or `@in` (a user's, kept as
-   `TYPE_PARAM_VARIANT`, or core's, as `Generator<@out YIELD>`) isn't
-   counted, though tempest doesn't honor variance otherwise ("Type
-   parameters are invariant", above), until it's known what relies on
-   it. Other downcasts are fine. Kotlin's wording ends at "checks" for
+   can't be checked: <[Box<Int32>]> from AnyValue", also for a
+   parameter Kotlin's core marks `@out` or `@in`, as
+   `Generator<@out YIELD>`, whose arguments Kotlin doesn't count, as type parameters are
+   invariant ("Type parameters are invariant", above). Other downcasts
+   are fine. Kotlin's wording ends at "checks" for
    both erasure errors; tempest says why
    ([kotlin-differences.md](kotlin-differences.md#changes-we-recommend-to-temper)).
 6. **Unnecessary,** as information: every `S` passes the target as

@@ -13,6 +13,7 @@ local Holder = temper.type("generics.Holder")
 ---@field value any
 ---@field held any
 ---@field pairWith fun(self: generics.Box, other: integer): { key: any, value: integer }
+---@field applied fun(self: generics.Box, f: fun(arg0: any): any): any
 
 ---@class generics.Box.type: temper.Type
 ---@operator call: generics.Box
@@ -35,6 +36,13 @@ end
 ---@return { key: any, value: integer }
 function Box.methods.pairWith(this, other)
   return temper.pair_constructor(this.value, other)
+end
+
+---@param this generics.Box
+---@param f fun(arg0: any): any
+---@return any
+function Box.methods.applied(this, f)
+  return f(this.value)
 end
 
 ---@class generics.Named
@@ -110,7 +118,7 @@ local Stage = temper.type("generics.Stage", Scene)
 function Stage.constructor(this)
 end
 
----@generic S
+---@generic S: generics.Scene
 ---@generic T
 ---@param x T
 ---@return T
@@ -132,6 +140,44 @@ end
 ---@return T
 local function relayed(x)
   return tagged(x)
+end
+
+---@generic A
+---@generic B
+---@param a A
+---@return { key: A, value: B[] }
+local function halfPair(a)
+  return temper.pair_constructor(a, {})
+end
+
+---@generic T
+---@param x T|temper.Null
+---@return T|temper.Null
+local function opt(x)
+  return x
+end
+
+---@generic T
+---@param x T
+---@param f fun(arg0: T): integer
+---@param scale? integer|temper.Null
+---@return integer
+local function scaled(x, f, scale)
+  if temper.is_null(scale) then
+    scale = 1
+  end
+  ---@cast scale integer
+  return temper.int32_mul(f(x), scale)
+end
+
+---@generic A
+---@generic B
+---@param a A
+---@param b B
+---@param f fun(arg0: A, arg1: B): string
+---@return string
+local function joined(a, b, f)
+  return f(a, b)
 end
 
 ---@param length integer
@@ -274,6 +320,19 @@ local subject2 = empty:firstName()
 print(temper.is_null(subject2) and "none" or (subject2 --[[@as string]]))
 local n = temper.int32_add(shelf:tally(1), shelf:tally(2))
 print(tagged(4) .. " " .. tagged("t") .. " " .. countOf(3) .. " " .. relayed(5) .. " " .. n)
+local half = halfPair(8)
+local halfToo = halfPair("h")
+print(half.key .. " " .. temper.list_length(half.value) .. " " .. halfToo.key)
+local optNone = opt(temper.null)
+local optSome = opt(6)
+local string_ = tostring(temper.is_null(optNone)) .. " " .. (temper.is_null(optSome) and 0 or (optSome --[[@as integer]])) .. " "
+local subject3 = opt(temper.null)
+print(string_ .. (temper.is_null(subject3) and "-" or (subject3 --[[@as string]])))
+local one = scaled(2, function(y) return temper.int32_add(y, 1) end)
+local two = scaled(2, function(y) return temper.int32_mul(y, 2) end, 10)
+local three = joined(3, "s", function(a, b) return a .. b end)
+local four = box:applied(function(s) return s .. "!" end)
+print(one .. " " .. two .. " " .. three .. " " .. four)
 local builder = temper.listbuilder_constructor()
 temper.listbuilder_add(builder, "x")
 temper.listbuilder_add(builder, "y")
@@ -300,18 +359,18 @@ print(t_1 .. " " .. t_2 .. " " .. tostring(temper.mapped_has(m, "a")) .. " " .. 
 local mb = temper.mapbuilder_constructor()
 temper.mapbuilder_set(mb, "q", 5)
 temper.mapbuilder_set(mb, "n", temper.null)
-local subject3 = temper.mapped_getor(mb, "q", 0)
-local subject4 = temper.mapped_getor(mb, "n", 0)
-print((temper.is_null(subject3) and -2 or (subject3 --[[@as integer]])) .. " " .. (temper.is_null(subject4) and -2 or (subject4 --[[@as integer]])) .. " " .. tostring(temper.mapped_has(mb, "n")))
+local subject4 = temper.mapped_getor(mb, "q", 0)
+local subject5 = temper.mapped_getor(mb, "n", 0)
+print((temper.is_null(subject4) and -2 or (subject4 --[[@as integer]])) .. " " .. (temper.is_null(subject5) and -2 or (subject5 --[[@as integer]])) .. " " .. tostring(temper.mapped_has(mb, "n")))
 ---@type integer|temper.Null
-local subject6
+local subject7
 if not temper.pcall(function()
-  subject6 = temper.mapbuilder_remove(mb, "q")
+  subject7 = temper.mapbuilder_remove(mb, "q")
 end) then
-  subject6 = 0
+  subject7 = 0
 end
-local subject5 = temper.is_null(subject6) and temper.null or tostring(subject6 --[[@as integer]])
-print(temper.is_null(subject5) and "null" or (subject5 --[[@as string]]))
+local subject6 = temper.is_null(subject7) and temper.null or tostring(subject7 --[[@as integer]])
+print(temper.is_null(subject6) and "null" or (subject6 --[[@as string]]))
 print(tostring(temper.listed_length(temper.mapped_keys(mb))))
 indexed()
 both()

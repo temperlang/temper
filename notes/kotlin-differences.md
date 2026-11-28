@@ -68,6 +68,35 @@ Language and frontend:
   Test: settle/types.cases, "list literals typed from the type wanted",
   "function literals typed from the type wanted", and "object literals
   take their class from the type wanted".
+- **No inferred join above `@mayDowncastTo(false)` types** (Tom,
+  2026-11-26; [typing.md](typing.md), "Generic calls"): where a generic
+  call's arguments bind a type parameter two ways, Kotlin binds it to
+  their join, `AnyValue` for `new Two(1, "s")` (`class Two<T>(a: T, b:
+  T)`), `List<Int32>` and `List<String>`, or `Int32` and `Float64`, whose
+  values some backends can't tell apart once joined. Tempest reports it
+  when the join would go above a type core marks `@mayDowncastTo(false)`:
+  "T is bound to both Int32 and String, which can't be told apart once
+  joined; give T explicitly". Joins of other types (`Dog` and `Cat` to
+  `Animal`), nullability (`Int32` and null), type arguments, and a type
+  wanted that binds `T` are unaffected. Recommended: Kotlin Temper
+  reports it too. A list literal's elements, as `[1, "s"]` with no
+  element type wanted, are the same, as Kotlin's `listT` (2026-11-27).
+  And as type parameters are invariant, tempest joins only where a
+  parameter's whole type is `T` or `T?`: inside `List<T>` or `fn (): T`
+  the first binding stays, so `lst(dogs, cats)` for `lst<T>(a: List<T>,
+  b: List<T>)` misfits, where Kotlin, whose `List` is covariant, binds
+  `Animal`.
+  Test: settle/types.cases, "a type parameter bound two ways is the
+  arguments' common supertype", "… inside another type isn't joined",
+  and "list literals' types, as Kotlin Temper reports them".
+- **The type wanted binds only what a call's arguments leave**
+  ([typing.md](typing.md), "From the type wanted"): `let b: Box<Animal>
+  = new Box(new Dog())` is a `Box<Dog>`, an error under invariance,
+  where Kotlin lets the type wanted bind `T`, checked 2026-11-27. Write
+  `new Box<Animal>(…)`. Letting the type wanted win where the arguments
+  fit it is possible later work.
+  Test: settle/types.cases, "leading type arguments with the rest
+  inferred" (`pn`).
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
   even where their `apply`s' signatures match, and the error suggests
@@ -258,6 +287,64 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
 ## Bugs in Kotlin Temper
 
 ### Language and types
+
+- **Arguments Kotlin doesn't check** (2026-11-26): a list literal
+  argument's elements, as `take(["a", 3])` or `take([1])` for `take(xs:
+  List<String>)` (for a constructor, Kotlin reports "Expected subtype
+  of List<String>, but got List<AnyValue>"), and a generic call's
+  number of type arguments, too many, `id<Int, Int>(n)` for `id<T>`,
+  which Kotlin ignores, as it does a written type's, `Map<Int>`,
+  `List<Int, Int>`, or `Box<Int, Int>` for `class Box<T>` (except in
+  `is` and `as`, "Expected value of type Type"). Tempest reports the
+  elements as Kotlin does a declaration's, and "Wrong number of type
+  arguments.  Expected 1". Kotlin should report them. Too few are
+  fine in both where a value gives the rest ("Leading type arguments",
+  below).
+  Test: settle/types.cases, "list literal arguments checked against the
+  type wanted", "generic calls with the wrong number of type
+  arguments", and "generic types written with the wrong number of type
+  arguments".
+
+- **Leading type arguments** with the rest inferred, `pair<Int>(1,
+  "s")` for `pair<A, B>(a: A, b: B)`, and `let p: P<Int> = new P(1,
+  "s")` for `class P<A, B>`, are fine in both, but `new P<Int>(1, "s")`
+  fails in Kotlin, "Cannot translate Invalid", and a method's,
+  `o.both<Int>(1, "s")`, is "Member both defined in Order incompatible
+  with usage" ("A method's explicit type arguments", below); and
+  Kotlin's `let p: P<Int> = new P("a", "s")` takes the value's type
+  whole, `P<String, String>`, ignoring the `Int`, checked 2026-11-26.
+  Tempest accepts `new P<Int>` and the method's, and reports the
+  mismatch, keeping the type arguments as written. Kotlin should
+  translate them and report it.
+  Where nothing gives the rest, both bind them to their bounds.
+  Test: settle/types.cases, "leading type arguments with the rest
+  inferred", "leading type arguments where nothing gives the rest", and
+  "a type parameter nothing solves takes its bound".
+
+- **A generic type written without type arguments,** `List`, or `Box`
+  for `class Box<T>`: both infer it from a variable's value, `let xs:
+  List = [1]`. Elsewhere Kotlin fails to translate it in a signature
+  or supertype ("Cannot translate", or a crash), and reports it in `is`
+  ("Could not infer type actuals"), checked 2026-11-26. Tempest reports
+  it wherever no value gives the arguments, through an alias too, as
+  "Wrong number of type arguments.  Expected 1", and the type is
+  unknown; that includes a field's initializer, which Kotlin may infer
+  from. Making a value (`new Box(1)`), a static member (`Box.make()`),
+  and an object literal's `class` name no type, so they're fine.
+  Kotlin should report the others too.
+  Test: settle/types.cases, "a generic type written without its type
+  arguments" (and "… inferred from a value"), and "bare generic names
+  where no type is written".
+
+- **A generic call binding a bare `T` to a value and null,** as
+  `pick(i, null)` for `pick<T>(a: T, b: T): T` and `i: Int`, is an
+  `Int32?` in Kotlin, which also reports the `null`: "Expected subtype
+  of Int32, but got Int32?" (2026-11-26). It accepts `new Two(i,
+  null)`, for `class Two<T>(a: T, b: T)`, as a `Two<Int32?>`. Tempest
+  binds `T` to `Int32?` in both and reports neither. Kotlin should
+  accept the first too.
+  Test: settle/types.cases, "a type parameter bound two ways is the
+  arguments' common supertype".
 
 - **An undeclared name in a branch that never runs,** `if (DEBUG) {
   console.log("${missing}"); }` with `let DEBUG = false;`, isn't
@@ -2202,14 +2289,23 @@ copied Kotlin's:
   and C++ headers exposing private members.
 - **Variance (recommended change):** Kotlin Temper honors `@out` and
   `@in` on type parameters, so it accepts a `List<Dog>` as a
-  `List<Animal>`. Temper plans invariant type parameters, since C++ and
-  Rust, among others, can't express variance well, and tempest stays
-  invariant ([typing.md](typing.md), "Type parameters are invariant").
-  Recommended: Kotlin Temper drops variance too. Tempest won't report
-  what only variance accepts until code relying on it is found and
-  changed.
-  Test: settle/types.cases, "function types compared part by part" and
-  "list literals typed from the type wanted".
+  `List<Animal>`, and leaves alone a run-time check to a type whose
+  argument is one of them. Every type parameter is invariant in tempest,
+  since C++ and Rust, among others, can't express variance well
+  ([typing.md](typing.md), "Type parameters are invariant"): it reports
+  "Cannot assign to List<Animal> from List<Dog>" (2026-11-26), and
+  `@out` and `@in` are gone, core's too. So a generic call whose
+  arguments bind a type parameter two ways, joined as Kotlin joins them,
+  may fail in tempest where Kotlin passes it: `k(dogs, cat)`, for
+  `k<T>(xs: List<T>, x: T)` and `dogs: List<Dog>`, binds `T` to
+  `Animal`, and a `List<Dog>` isn't a `List<Animal>`. `Never<Sub>` is still a
+  `Never<Super>`, by `Never`'s own rule. Nothing in core, std, the tests, or the six
+  showcase libraries relied on variance. Recommended: Kotlin Temper
+  drops variance too, keeping `Never`'s rule.
+  Test: settle/types.cases, "type parameters are invariant", "@out and
+  @in are ordinary decorators on type parameters", and "Never<A> is a
+  Never<B> where A is a B, by its own rule"; settle/class-types.cases, "is and as checks of type parameters'
+  values and generic types".
 
 - **Kotlin Temper's move to its newer types** (PR #500, in review
   2026-10-29) carries `Never<T>` with its fallback type into its tmpl,
@@ -2384,9 +2480,49 @@ copied Kotlin's:
     writes every call's. Where only the body mentions one (`new
     ListBuilder<T>()`), Python annotates the body with its bound, as
     mypy and pyright reject a type variable the signature doesn't bind.
-    2026-11-10.
-    Test: programs/generics.temper.md (`tagged`, `countOf`, `tally`)
-    on every backend.
+    2026-11-10. Any other type parameter nothing at a call solves takes
+    its bound the same way, as in Kotlin (`B` in `make<Int>(1)` for
+    `make<A, B>(a: A): P<A, B?>`; 2026-11-26, before which tempest's
+    backends failed on it).
+    Test: programs/generics.temper.md (`tagged`, `countOf`, `tally`,
+    `halfPair`) on every backend.
+    Rust can't infer one from a `null` argument either (`opt(None)` for
+    `opt<T>(x: T?): T?`, E0283), so it spells the call's there too
+    (`opt::<AnyValue>(None)`; `analysis::infers_type_args_from`), and
+    so does C#, whose class-bounded `T?` is its own `T?`
+    (`Wrap<Tag>(null)`; 2026-11-27).
+    Test: programs/generics.temper.md (`opt`); C#'s
+    nullable-type-args case (`wrapShown<Tag>(null)`).
+  - **C++ `T?` for a type parameter** is the runtime's
+    `core::Nullable<T>`: a `shared_ptr` as it is, a nullable as it is,
+    else `NullableParam<T>`, so a generic call's `Pair<A, B?>` with `B` a
+    class is the `Pair<int32_t, std::shared_ptr<Named>>` its caller names.
+    Kotlin's (and tempest's before 2026-11-27) wrote `NullableParam<B>`,
+    a different type, which g++ rejects in a type argument, and which a
+    plain `B?` result converts to a class's `shared_ptr` by throwing on
+    null. `x as T` from a null `T?` bubbles for a class too.
+    Test: temper-be-cpp/tests/functional.rs, `NULLABLE_TYPE_ARGS`.
+  - **C# `T?` for a type parameter bounded by a class or interface**
+    (not core's, connected, or `@fun`) is C#'s own `T?`, with `class`
+    added to an interface bound (`where B : class, IShown`), so a
+    generic call's `Pair<A, B?>` is the `KeyValuePair<int, Named?>` its
+    caller names. Kotlin's writes `Optional<B>` for every type
+    parameter, and its C# fails there (CS0029). Only core declares the
+    supertypes of what C# writes as value types (`int`, `bool`), so no
+    other library's bound admits one; core's (`MapKey`, `Equatable`)
+    keep `Optional<T>`. Any other `T?` inside a type argument or
+    function type, at a call or field that gives it another type
+    (`Pair<Int, AnyValue?>`, `List<Int?>`, `fn (Int?): Int`), is not
+    yet, naming the workaround (bound `T`, or change the shape), where
+    Kotlin's and tempest's C# failed in csc; declarations stay legal
+    (std's `OrNullJsonAdapter<T>`), and results C# never names (a
+    receiver's, a dropped one) pass. Not checked: an upcast to such a
+    type (`JsonAdapter<Int?>` from `OrNullJsonAdapter<Int>`), which
+    still fails in csc. `x as T` from an `Optional<T>` reads `.Value`,
+    which throws (bubbles) for none; it was `Core.CastToNonNull<T>(x)`,
+    which cast the boxed `Optional` (2026-11-27).
+    Test: temper-be-csharp/tests/functional.rs, `NULLABLE_TYPE_ARGS`
+    and `nested_nullable_type_args`.
   - **Not compared:** the Kotlin layout test (`kotlin_layout.rs`)
     doesn't cover the generics tests yet.
 - **Core's other types in the backends** (2026-11-02):

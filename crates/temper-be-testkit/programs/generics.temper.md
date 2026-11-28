@@ -6,8 +6,11 @@ literals, `Listed`'s and `List`'s members, `ListBuilder`, `Pair`, `Map`,
 and `MapBuilder`, with nullables mixed in; and generic functions and a
 method with a type parameter that no parameter's type mentions, which
 the frontend binds to its bound unless the call says, and which Rust,
-C#, and C++ then spell out; and an exported generic function that calls
-a private one. The log is what the interpreter gives.
+C#, and C++ then spell out, as it binds one that only a result's type
+mentions and nothing at the call solves, and Rust where only a `null`
+argument would tell it; and an exported generic
+function that calls a private one. The log is what the interpreter
+gives.
 
     export interface Holder<T> {
       public get held(): T;
@@ -16,6 +19,7 @@ a private one. The log is what the interpreter gives.
     export class Box<T>(public value: T) extends Holder<T> {
       public get held(): T { value }
       public pairWith(other: Int): Pair<T, Int> { new Pair(value, other) }
+      public applied<TOut>(f: fn (T): TOut): TOut { f(value) }
     }
 
     export class Named(public name: String) {}
@@ -39,6 +43,15 @@ a private one. The log is what the interpreter gives.
       b.length + n
     }
     let relayed<S extends Scene, T>(x: T): T { tagged<S, T>(x) }
+    // Nothing at a call solves `B`, so it's `AnyValue`. (`Pair<A, B?>`
+    // is not yet in C# for an unconstrained `B`: C#'s inline cases.)
+    let halfPair<A, B>(a: A): Pair<A, List<B>> { new Pair<A, List<B>>(a, []) }
+    // A `null` argument doesn't tell Rust `T`, so it's spelled out.
+    let opt<T>(x: T?): T? { x }
+    // A trailing block after type arguments, all or leading ones, takes
+    // its parameters' types from them, placed before `scale`.
+    let scaled<T>(x: T, f: fn (T): Int, scale: Int = 1): Int { f(x) * scale }
+    let joined<A, B>(a: A, b: B, f: fn (A, B): String): String { f(a, b) }
 
     // A private function that an exported generic one calls, which C++
     // declares in the header that defines the generic one.
@@ -73,6 +86,17 @@ a private one. The log is what the interpreter gives.
     console.log(empty.firstName() ?? "none");
     let n = shelf.tally(1) + shelf.tally<Named>(2);
     console.log("${tagged(4)} ${tagged("t")} ${countOf(3)} ${relayed<Stage, Int>(5)} ${n}");
+    let half = halfPair<Int>(8);
+    let halfToo = halfPair("h");
+    console.log("${half.key} ${half.value.length} ${halfToo.key}");
+    let optNone = opt(null);
+    let optSome = opt(6);
+    console.log("${optNone == null} ${optSome ?? 0} ${opt<String>(null) ?? "-"}");
+    let one = scaled<Int>(2) { y => y + 1 };
+    let two = scaled<Int>(2, 10) { y => y * 2 };
+    let three = joined<Int>(3, "s") { a, b => "${a}${b}" };
+    let four = box.applied<String> { s => "${s}!" };
+    console.log("${one} ${two} ${three} ${four}");
     let builder = new ListBuilder<String>();
     builder.add("x");
     builder.add("y");
@@ -146,6 +170,9 @@ boxed 7
 ann
 none
 4 t 3 5 7
+8 0 h
+true 6 -
+3 40 3s boxed!
 3 w y
 2 ? x
 2 -1 true 2

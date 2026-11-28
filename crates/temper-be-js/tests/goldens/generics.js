@@ -14,7 +14,7 @@ import {
 } from "@temperlang/core";
 
 /**
- * @template S
+ * @template {Scene} S
  * @template T
  * @param {T} x
  * @returns {T}
@@ -42,6 +42,49 @@ function countOf(n) {
  */
 function relayed(x) {
   return tagged(x);
+}
+
+/**
+ * @template A
+ * @template B
+ * @param {A} a
+ * @returns {import("@temperlang/core/pair.js").Pair<A, readonly B[]>}
+ */
+function halfPair(a) {
+  return pairConstructor(a, Object.freeze([]));
+}
+
+/**
+ * @template T
+ * @param {T | null} x
+ * @returns {T | null}
+ */
+function opt(x) {
+  return x;
+}
+
+/**
+ * @template T
+ * @param {T} x
+ * @param {(arg0: T) => number} f
+ * @param {number | null} [scale]
+ * @returns {number}
+ */
+function scaled(x, f, scale) {
+  scale ??= 1;
+  return Math.imul(f(x), scale);
+}
+
+/**
+ * @template A
+ * @template B
+ * @param {A} a
+ * @param {B} b
+ * @param {(arg0: A, arg1: B) => string} f
+ * @returns {string}
+ */
+function joined(a, b, f) {
+  return f(a, b);
 }
 
 /**
@@ -299,6 +342,15 @@ export class Box extends type(Holder) {
   pairWith(other) {
     return pairConstructor(this.#value, other);
   }
+
+  /**
+   * @template TOut
+   * @param {(arg0: T) => TOut} f
+   * @returns {TOut}
+   */
+  applied(f) {
+    return f(this.#value);
+  }
 }
 
 export class Named extends type() {
@@ -364,7 +416,7 @@ export class Shelf extends type() {
   }
 
   /**
-   * @template TName
+   * @template {Named} TName
    * @param {number} extra
    * @returns {number}
    */
@@ -399,6 +451,19 @@ const empty_ = new Shelf(noNames);
 console.log(empty_.firstName() ?? "none");
 const n = (shelf.tally(1) + shelf.tally(2)) | 0;
 console.log(`${tagged(4)} ${tagged("t")} ${countOf(3)} ${relayed(5)} ${n}`);
+/** @type {import("@temperlang/core/pair.js").Pair<number, readonly unknown[]>} */
+const half = halfPair(8);
+/** @type {import("@temperlang/core/pair.js").Pair<string, readonly unknown[]>} */
+const halfToo = halfPair("h");
+console.log(`${half.key} ${half.value.length} ${halfToo.key}`);
+const optNone = opt(null);
+const optSome = opt(6);
+console.log(`${optNone == null} ${optSome == null ? 0 : optSome} ${opt(null) ?? "-"}`);
+const one = scaled(2, (y) => (y + 1) | 0);
+const two = scaled(2, (y) => Math.imul(y, 2), 10);
+const three = joined(3, "s", (a, b) => `${a}${b}`);
+const four = box.applied((s) => `${s}!`);
+console.log(`${one} ${two} ${three} ${four}`);
 /** @type {string[]} */
 const builder = [];
 builder.push("x");
@@ -434,13 +499,13 @@ console.log(`${(mb.has("q") ? /** @type {number | null} */ (mb.get("q")) : 0) ??
 let t$21;
 {
   /** @type {number | null} */
-  let subject6;
+  let subject7;
   try {
-    subject6 = mapBuilderRemove(mb, "q");
+    subject7 = mapBuilderRemove(mb, "q");
   } catch {
-    subject6 = 0;
+    subject7 = 0;
   }
-  t$21 = subject6 == null ? null : subject6.toString();
+  t$21 = subject7 == null ? null : subject7.toString();
 }
 console.log(t$21 ?? "null");
 console.log(Object.freeze(Array.from(mb.keys())).length.toString());

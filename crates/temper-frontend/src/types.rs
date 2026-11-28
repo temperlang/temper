@@ -164,27 +164,33 @@ const BUILTIN_GENERIC_CLASSES: [&str; 10] = [
 /// How many of [`BUILTIN_GENERIC_CLASSES`] are `@mayDowncastTo(false)`.
 const NO_DOWNCAST: usize = 4;
 
-/// The builtin generic types' type parameters, by index, that core marks
-/// `@out` or `@in`, which Kotlin Temper honors and tempest doesn't
-/// (notes/typing.md, "Type parameters are invariant").
-const BUILTIN_VARIANT_PARAMS: [(&str, usize); 13] = [
-    ("DoneResult", 0),
-    ("Generator", 0),
-    ("GeneratorResult", 0),
-    ("List", 0),
-    ("Map", 0),
-    ("Map", 1),
-    ("Mapped", 0),
-    ("Never", 0),
-    ("Pair", 0),
-    ("Pair", 1),
-    ("Promise", 0),
-    ("SafeGenerator", 0),
-    ("ValueResult", 0),
-];
-
 /// How deep [`Types::is_subtype`] looks, through type parameters' bounds
 /// and type arguments, before giving up.
+/// What a call's arguments bind its type parameters to, so far
+/// ([`Types::unify`]).
+#[derive(Clone, Debug)]
+pub struct Solution {
+    /// Each type parameter's solution, unknown where none.
+    pub actuals: Vec<TypeId>,
+    /// A type parameter bound two ways whose join goes above a type core
+    /// marks `@mayDowncastTo(false)`, with those two types.
+    pub clash: Option<(usize, TypeId, TypeId)>,
+    /// Whether each was bound inside another type, as in `List<T>`, so a
+    /// solution that differs isn't joined with it.
+    nested: Vec<bool>,
+}
+
+impl Solution {
+    /// No type parameter of `n` solved.
+    pub fn new(n: usize) -> Self {
+        Solution {
+            actuals: vec![UNKNOWN; n],
+            clash: None,
+            nested: vec![false; n],
+        }
+    }
+}
+
 const MAX_SUBTYPE_DEPTH: u32 = 16;
 
 impl Default for Types {
@@ -242,15 +248,10 @@ impl Types {
     }
 
     /// A type parameter's type. Its bound is set by
-    /// [`Types::set_bound`], unknown until then.
+    /// [`Types::set_bound`], unknown until then, however early the type is
+    /// made.
     pub fn param(&mut self, symbol: SymbolId) -> TypeId {
-        self.bounds.entry(symbol).or_insert(UNKNOWN);
         self.intern(TypeData::Param(symbol))
-    }
-
-    /// Whether [`Types::param`] has been asked for a type parameter.
-    pub fn knows_param(&self, symbol: SymbolId) -> bool {
-        self.bounds.contains_key(&symbol)
     }
 
     /// Sets a type parameter's bound: `AnyValue` if it has none. A bound
@@ -353,11 +354,22 @@ impl Types {
     /// wanted, `T?` from `Int32?` or `Int32`, and function types'
     /// parameters and results, with a `@fun` interface's type as the
     /// function type it stands for, unless both are of one interface.
-    /// Each solution goes into `actuals` at the formal's index, `Dog` and
-    /// `Dog?` joined; one solved two different ways goes into `conflicts`
-    /// too. Only fully known types are solutions, and not null, `Never`,
-    /// or `Void`; a nullable type is one for a bare `T`, as for Kotlin
-    /// Temper, whose bound check takes it as fitting only `AnyValue`. A
+    /// Each solution goes into `solution`'s actuals at the formal's index.
+    /// Where the pattern's whole type is the formal (`T` or `T?`), it's
+    /// joined with what's there as Kotlin Temper's solver joins them
+    /// ([`Types::join_or_any`]): `Dog?` for `Dog` and `Dog?` or null,
+    /// `Animal` for `Dog` and `Cat`, `AnyValue` for `Int32` and `String`.
+    /// The first join that goes above a type core marks
+    /// `@mayDowncastTo(false)` ([`Types::no_downcast`]), as that `AnyValue`
+    /// does, whose values may not be told apart once joined, goes into
+    /// the clash as the formal's index and the two types joined. Inside
+    /// another type, as `List<T>` or `fn (): T`, where type parameters are
+    /// invariant, a solution isn't joined: the first stays, and so does it
+    /// against a later whole one, so the other arguments don't fit it.
+    /// Only fully known types are solutions, and not `Never` or `Void`;
+    /// null alone solves as null, which callers drop; a nullable type is
+    /// one for a bare `T`, as for Kotlin Temper, whose bound check takes
+    /// it as fitting only `AnyValue`. A
     /// `Never<A>` passed where no `Never` is wanted solves as its `A`, as
     /// Kotlin's reconciliation unpacks it.
     pub fn unify(
@@ -365,37 +377,67 @@ impl Types {
         pattern: TypeId,
         actual: TypeId,
         formals: &[SymbolId],
-        actuals: &mut [TypeId],
-        conflicts: &mut [bool],
+        solution: &mut Solution,
+    ) {
+        self.unify_at(pattern, actual, formals, solution, true, false);
+    }
+
+    /// [`Types::unify`] for a list literal's type, `actual`, whose element
+    /// type is as a whole type, as the literal is typed as it's wanted:
+    /// `[new Dog()]` and `[new Cat()]` where `List<T>`s are wanted bind
+    /// `T` to `Animal`.
+    pub fn unify_list_literal(
+        &mut self,
+        pattern: TypeId,
+        actual: TypeId,
+        formals: &[SymbolId],
+        solution: &mut Solution,
+    ) {
+        self.unify_at(pattern, actual, formals, solution, true, true);
+    }
+
+    /// [`Types::unify`] at a part of the pattern that's the whole of it,
+    /// or of a list literal's elements (`whole`), or one inside another
+    /// type; `literal` while `actual` is a list literal's type.
+    fn unify_at(
+        &mut self,
+        pattern: TypeId,
+        actual: TypeId,
+        formals: &[SymbolId],
+        solution: &mut Solution,
+        whole: bool,
+        literal: bool,
     ) {
         use TypeData::*;
         match (self.get(pattern).clone(), self.get(actual).clone()) {
-            (NeverOf(p), NeverOf(a)) => self.unify(p, a, formals, actuals, conflicts),
-            (_, NeverOf(a)) => self.unify(pattern, a, formals, actuals, conflicts),
+            (NeverOf(p), NeverOf(a)) => self.unify_at(p, a, formals, solution, whole, literal),
+            (_, NeverOf(a)) => self.unify_at(pattern, a, formals, solution, whole, literal),
             (Param(symbol), _) => {
                 let Some(i) = formals.iter().position(|&f| f == symbol) else {
                     return;
                 };
-                if matches!(self.get(actual), Never | Null)
-                    || actual == VOID
-                    || !self.is_known(actual)
-                {
+                if matches!(self.get(actual), Never) || actual == VOID || !self.is_known(actual) {
                     return;
                 }
-                match actuals[i] {
-                    UNKNOWN => actuals[i] = actual,
-                    // `Dog` and `Dog?` solve it as `Dog?`, as in Kotlin.
-                    solved if self.nullable(solved) == self.nullable(actual) => {
-                        actuals[i] = self.join(solved, actual);
+                let solved = solution.actuals[i];
+                if solved == UNKNOWN {
+                    solution.actuals[i] = actual;
+                    solution.nested[i] = !whole;
+                } else if solved == actual || !whole || solution.nested[i] {
+                    solution.nested[i] |= !whole;
+                } else {
+                    let (joined, widens) = self.join_apart(solved, actual);
+                    if widens {
+                        solution.clash.get_or_insert((i, solved, actual));
                     }
-                    _ => conflicts[i] = true,
+                    solution.actuals[i] = joined;
                 }
             }
-            (Nullable(p), Nullable(a)) => self.unify(p, a, formals, actuals, conflicts),
-            (Nullable(p), _) => self.unify(p, actual, formals, actuals, conflicts),
+            (Nullable(p), Nullable(a)) => self.unify_at(p, a, formals, solution, whole, literal),
+            (Nullable(p), _) => self.unify_at(p, actual, formals, solution, whole, literal),
             _ if self.base(pattern) != self.base(actual) && self.is_fun_pair(pattern, actual) => {
                 if let (Some(p), Some(a)) = (self.as_fn(pattern), self.as_fn(actual)) {
-                    self.unify(p, a, formals, actuals, conflicts);
+                    self.unify_at(p, a, formals, solution, false, false);
                 }
             }
             (Applied { base, args: x }, _) => {
@@ -405,7 +447,7 @@ impl Types {
                 let y = self.args(seen).to_vec();
                 if x.len() == y.len() {
                     for (&x, &y) in x.iter().zip(&y) {
-                        self.unify(x, y, formals, actuals, conflicts);
+                        self.unify_at(x, y, formals, solution, literal, false);
                     }
                 }
             }
@@ -418,9 +460,9 @@ impl Types {
                 },
             ) if x.len() == y.len() => {
                 for (x, y) in x.iter().zip(&y) {
-                    self.unify(x.ty, y.ty, formals, actuals, conflicts);
+                    self.unify_at(x.ty, y.ty, formals, solution, false, false);
                 }
-                self.unify(p, a, formals, actuals, conflicts);
+                self.unify_at(p, a, formals, solution, false, false);
             }
             _ => {}
         }
@@ -517,12 +559,6 @@ impl Types {
         (self.is_final(base) && base != VOID)
             || (self.builtin_name(base))
                 .is_some_and(|n| BUILTIN_GENERIC_CLASSES[..NO_DOWNCAST].contains(&n))
-    }
-
-    /// Whether core marks a builtin generic type's `index`th type
-    /// parameter `@out` or `@in`.
-    pub fn is_builtin_variant(&self, base: TypeId, index: usize) -> bool {
-        (self.builtin_name(base)).is_some_and(|n| BUILTIN_VARIANT_PARAMS.contains(&(n, index)))
     }
 
     /// A generic type's base, as `List` for `List<Int>`, or `t` itself.
@@ -636,6 +672,42 @@ impl Types {
         }
     }
 
+    /// [`Types::join`], or where that finds no common type, `AnyValue`,
+    /// nullable if either is, as Kotlin Temper's least upper bound gives
+    /// for `Int32` and `String`.
+    pub fn join_or_any(&mut self, a: TypeId, b: TypeId) -> TypeId {
+        match self.join(a, b) {
+            UNKNOWN
+                if [a, b]
+                    .iter()
+                    .any(|&t| matches!(self.get(t), TypeData::Nullable(_))) =>
+            {
+                self.nullable(ANY_VALUE)
+            }
+            UNKNOWN => ANY_VALUE,
+            t => t,
+        }
+    }
+
+    /// Two types joined ([`Types::join_or_any`]), and whether that goes
+    /// above one that core marks `@mayDowncastTo(false)`, other than as
+    /// its nullable type, as `AnyValue` for `Int32` and `String` does,
+    /// whose values can't be told apart once joined.
+    pub fn join_apart(&mut self, a: TypeId, b: TypeId) -> (TypeId, bool) {
+        let joined = self.join_or_any(a, b);
+        (joined, self.widens(a, joined) || self.widens(b, joined))
+    }
+
+    /// Whether `joined` is above `t`, other than as `t?`, and core marks
+    /// `t` `@mayDowncastTo(false)`.
+    fn widens(&self, t: TypeId, joined: TypeId) -> bool {
+        let inner = |t| match *self.get(t) {
+            TypeData::Nullable(inner) => inner,
+            _ => t,
+        };
+        inner(t) != inner(joined) && self.no_downcast(inner(t))
+    }
+
     /// The least common supertype of two class, interface, or builtin
     /// types, if there's exactly one ([`Types::join`]).
     fn common_supertype(&mut self, a: TypeId, b: TypeId) -> Option<TypeId> {
@@ -705,19 +777,20 @@ impl Types {
 
     /// Whether a value of type `s` may be used as a `t`, if that's known.
     /// One generic type given arguments is another's only if, as its
-    /// supertype with the other's base sees it, they're the same, but
-    /// reported as not only where an argument sets them apart under any
-    /// variance (notes/typing.md, "Generic types"); likewise one function
-    /// type is another only if they're the same, but is reported as not
-    /// only where Kotlin Temper's variance rejects it too
-    /// ([`Types::fn_subtype`]). A type parameter is a subtype of its
+    /// supertype with the other's base sees it, they're the same, as type
+    /// parameters are invariant (notes/typing.md, "Generic types"); one
+    /// function type is another only if they're the same, but is reported
+    /// as not only where Kotlin Temper's variance rejects it too
+    /// ([`Types::fn_subtype`]). A `Never<A>` is a `Never<B>` where an `A`
+    /// is a `B`, by its own rule. A type parameter is a subtype of its
     /// bound. A class or interface is a subtype of what it extends, and
     /// nothing else, even if a value of an interface may be of a class that
     /// extends another type too: an `is` check narrows it to that. A
     /// function is a `@fun` interface's value, and such a value a function,
     /// where the function types they are fit, but no other `@fun`
     /// interface's value ([`Types::fun_subtype`]); a function is no other
-    /// class's or interface's value, nor theirs a function.
+    /// class's or interface's value, nor theirs a function. An `AnyValue`
+    /// is no narrower type, though it may hold one.
     pub fn is_subtype(&mut self, s: TypeId, t: TypeId) -> Option<bool> {
         self.subtype(s, t, 0)
     }
@@ -736,8 +809,10 @@ impl Types {
             (Nullable(a), Nullable(b)) => self.subtype(a, b, depth),
             (_, Nullable(b)) => self.subtype(s, b, depth),
             // `Never<A>` is what an `A` is, and is a `Never<B>` if `A` is a
-            // `B`, `@out` as core declares it; nothing else is a `Never<B>`
-            // but what never completes.
+            // `B`: it has no values, so nothing can go wrong, and a backend
+            // without a bottom type upcasts its `A` to its `B`. This is
+            // `Never`'s own rule, not variance. Nothing else is a
+            // `Never<B>` but what never completes.
             (NeverOf(a), NeverOf(b)) => self.subtype(a, b, depth),
             (NeverOf(a), _) => self.subtype(a, t, depth),
             (_, NeverOf(_)) => Some(false),
@@ -765,6 +840,12 @@ impl Types {
             (_, Param(_)) => Some(false),
             _ if t == ANY_VALUE => {
                 (s != VOID && (self.is_definite(s) || self.is_class_like(s))).then_some(true)
+            }
+            // Nor is an `AnyValue` a narrower type, as for Kotlin Temper:
+            // "Cannot assign to Int32 from AnyValue".
+            _ if s == ANY_VALUE => {
+                (self.is_definite(t) || self.is_class_like(t) || self.is_core_nominal(t))
+                    .then_some(false)
             }
             _ if self.is_fun_pair(s, t) => self.fun_subtype(s, t, depth),
             // Core's non-generic classes, as `StringBuilder`, are only what
@@ -911,12 +992,12 @@ impl Types {
     /// arguments, neither of them null, nullable, a type parameter, or
     /// `AnyValue` for `t`. `s` is compared as its supertype with `t`'s base
     /// sees it ([`Types::supertype_as`]): with the same arguments, it's a
-    /// `t`; with a pair of arguments neither of which is a subtype of the
-    /// other, it isn't, whatever the parameters' variance; otherwise it
-    /// may be, under some variance. Without such a supertype, it isn't one
-    /// where its declaration says what it extends: a builtin type, which
-    /// extends only builtin types core says it does, or a user's class or
-    /// interface that doesn't extend `t`'s.
+    /// `t`, and with others it isn't, as type parameters are invariant,
+    /// unless some argument isn't worked out, which may yet make them the
+    /// same. Without such a supertype, it isn't one where its declaration
+    /// says what it extends: a builtin type, which extends only builtin
+    /// types core says it does, or a user's class or interface that
+    /// doesn't extend `t`'s.
     fn generic_subtype(&mut self, s: TypeId, t: TypeId, depth: u32) -> Option<bool> {
         let (s_base, t_base) = (self.base(s), self.base(t));
         if let Some(seen) = self.supertype_as(s, t_base) {
@@ -924,10 +1005,16 @@ impl Types {
                 return Some(true);
             }
             let (x, y) = (self.args(seen).to_vec(), self.args(t).to_vec());
-            let apart = x.len() == y.len()
-                && (x.iter().zip(&y)).any(|(&x, &y)| {
+            if x.len() != y.len() {
+                return None;
+            }
+            // Type parameters are invariant, so it's a `t` only with the
+            // same arguments; where some aren't worked out, only one that
+            // can't be the other tells.
+            let apart = (self.is_known(seen) && self.is_known(t))
+                || (x.iter().zip(&y)).any(|(&x, &y)| {
                     self.subtype(x, y, depth) == Some(false)
-                        && self.subtype(y, x, depth) == Some(false)
+                        || self.subtype(y, x, depth) == Some(false)
                 });
             return apart.then_some(false);
         }
@@ -1080,8 +1167,8 @@ mod tests {
         assert_eq!(types.is_subtype(NEVER, STRING), Some(true));
         assert_eq!(types.is_subtype(STRING, ANY_VALUE), Some(true));
         assert_eq!(types.is_subtype(NULL, ANY_VALUE), Some(false));
-        // AnyValue may hold an Int32.
-        assert_eq!(types.is_subtype(ANY_VALUE, INT32), None);
+        // AnyValue may hold an Int32, but isn't one without a cast.
+        assert_eq!(types.is_subtype(ANY_VALUE, INT32), Some(false));
         assert_eq!(types.is_subtype(UNKNOWN, STRING), None);
         // A class or interface is only what it extends.
         let interface = class(&mut types, 2, Vec::new());
@@ -1200,7 +1287,6 @@ mod tests {
         let core = include_str!("../../../lib/core/core.temper");
         let mut classes = Vec::new();
         let mut no_downcast = Vec::new();
-        let mut variant = Vec::new();
         let mut previous = "";
         for line in core.lines() {
             let decl = line.trim_start_matches("export ");
@@ -1215,31 +1301,13 @@ mod tests {
                         continue;
                     }
                 };
-            let Some((name, params)) = rest.split_once('<') else {
+            let Some((name, _)) = rest.split_once('<') else {
                 previous = line;
                 continue;
             };
             if !line.starts_with("export") || !name.chars().all(char::is_alphanumeric) {
                 previous = line;
                 continue;
-            }
-            // The parameters, split at commas outside nested `<…>`.
-            let (mut depth, mut pieces) = (0, vec![String::new()]);
-            for c in params.chars() {
-                match c {
-                    '>' if depth == 0 => break,
-                    ',' if depth == 0 => pieces.push(String::new()),
-                    _ => {
-                        depth += i32::from(c == '<') - i32::from(c == '>');
-                        pieces.last_mut().unwrap().push(c);
-                    }
-                }
-            }
-            for (index, piece) in pieces.iter().enumerate() {
-                let piece = piece.trim_start();
-                if piece.starts_with("@out ") || piece.starts_with("@in ") {
-                    variant.push((name, index));
-                }
             }
             if is_class {
                 classes.push(name);
@@ -1258,8 +1326,6 @@ mod tests {
             sorted(no_downcast),
             sorted(BUILTIN_GENERIC_CLASSES[..NO_DOWNCAST].to_vec())
         );
-        variant.sort();
-        assert_eq!(variant, BUILTIN_VARIANT_PARAMS.to_vec());
     }
 
     #[test]
@@ -1277,9 +1343,8 @@ mod tests {
         let strings = applied(&mut types, STRING);
         let values = applied(&mut types, ANY_VALUE);
         assert_eq!(types.is_subtype(ints, strings), Some(false));
-        // `List<Int32>` may be a `List<AnyValue>`, as `List` is `@out`
-        // in Kotlin Temper.
-        assert_eq!(types.is_subtype(ints, values), None);
+        // Type parameters are invariant, `List`'s too.
+        assert_eq!(types.is_subtype(ints, values), Some(false));
         assert_eq!(types.is_subtype(ints, ANY_VALUE), Some(true));
         assert_eq!(types.is_subtype(ints, STRING), Some(false));
         assert_eq!(types.display(ints, &|_| String::new()), "List<Int32>");
@@ -1319,6 +1384,17 @@ mod tests {
         assert_eq!(types.is_subtype(ints, listed_strings), Some(false));
         assert_eq!(types.is_subtype(built_ints, ints), Some(false));
         assert_eq!(types.is_subtype(listed_ints, ints), Some(false));
+        // Nor is a `List<Int32>` a `Listed<Int32?>` or a `List<Int32?>`.
+        let int_or_null = types.nullable(INT32);
+        let (listed_maybe, maybe) = (
+            types.intern(TypeData::Applied {
+                base: listed,
+                args: vec![int_or_null],
+            }),
+            applied(&mut types, int_or_null),
+        );
+        assert_eq!(types.is_subtype(ints, listed_maybe), Some(false));
+        assert_eq!(types.is_subtype(ints, maybe), Some(false));
         let string_key = types.intern(TypeData::Applied {
             base: map_key,
             args: vec![STRING],
@@ -1373,7 +1449,7 @@ mod tests {
                 ancestors,
                 formals,
                 supers,
-                fun_sig: None,
+                ..ClassInfo::default()
             };
             types.set_class(SymbolId(symbol), info);
         };
@@ -1407,14 +1483,8 @@ mod tests {
         assert_eq!(types.supertype_as(sub2_t, sup_base), Some(sup_string));
         assert_eq!(types.supertype_as(sup_string, sub_base), None);
         // `T` is solved from a `Sub4` where a `Sup<T>` is wanted.
-        let (mut actuals, mut conflicts) = (vec![UNKNOWN], vec![false]);
-        types.unify(
-            sup_t,
-            sub4_type,
-            &[SymbolId(t)],
-            &mut actuals,
-            &mut conflicts,
-        );
-        assert_eq!(actuals, [STRING]);
+        let mut solution = Solution::new(1);
+        types.unify(sup_t, sub4_type, &[SymbolId(t)], &mut solution);
+        assert_eq!(solution.actuals, [STRING]);
     }
 }

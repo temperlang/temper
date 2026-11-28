@@ -697,7 +697,7 @@ let q4<T extends Animal>(x: T): Boolean {
   if (x is Dog) { let d: Dog = x; true } else { false }
 }
 let q5<T, U extends T>(x: U): T { x }
-// Kotlin honors List's `@out`; the rule waits for variance.
+// Type parameters are invariant, `List`'s too, which Kotlin marks `@out`.
 let v1(a: List<Dog>): List<Animal> { a }
 // Calls are solved from their arguments, as in Kotlin.
 let id<T>(x: T): T { x }
@@ -862,14 +862,18 @@ error 1188..1189: Cannot assign to List<Int32> from List<T>
 error 1216..1217: Cannot assign to Void from T
 error 1351..1352: Cannot assign to Dog from T
 error 1393..1394: Cannot assign to T from Dog
-error 1735..1740: Cannot assign to String from Int32
+error 1647..1648: Cannot assign to List<Animal> from List<Dog>
+error 1749..1754: Cannot assign to String from Int32
 log a
 
 === generic calls solved per call, as Kotlin Temper reports them
 // Each call binds the function's type parameters, from its type
 // arguments or else its arguments' types; a parameter bound two ways is
-// left unknown, as Kotlin may find a common supertype. Kotlin folds a
-// call of constants first, so `id<Int>("a")` then passes as a `String`.
+// their common supertype, as in Kotlin, but not above `Int32` or
+// `String` (`@mayDowncastTo(false)`), so c3 is an error, nor inside
+// another type, so `s` doesn't fit `k(xs, s)`'s `Int32` (see "a type
+// parameter bound two ways …", below). Kotlin folds a call
+// of constants first, so `id<Int>("a")` then passes as a `String`.
 interface Animal {}
 class Dog extends Animal {}
 let id<T>(x: T): T { x }
@@ -987,23 +991,26 @@ console.log(id(1).toString());
         #void)))
   (Call (Call . console \log) (Call (Call . (Call id:2 1) \toString)))
   #void)
-error 488..489: Cannot assign to T from T?
-error 629..634: Cannot assign to String from Int32
-error 694..706: Cannot assign to Int32 from String
-error 736..737: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
-error 749..756: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
-error 806..812: Cannot assign to String from Int32
-error 831..841: Cannot assign to String from Int32
-error 860..870: Cannot assign to String from Int32
-error 985..986: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [Int32, Int32], but got [Int32, String]
-error 991..995: No callee matches inputs [Int32] among [<T extends AnyValue>(T, Int32) -> T]
-error 1009..1013: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got [Int32, String]
-error 1018..1025: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
-error 1094..1101: Cannot assign to String from Int32
-error 1133..1141: Cannot assign to String from Int32
-error 1158..1167: Cannot assign to Int32 from String
-error 1187..1197: Cannot assign to String from Int32
-Failed: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
+error 679..680: Cannot assign to T from T?
+error 820..825: Cannot assign to String from Int32
+error 857..869: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 885..897: Cannot assign to Int32 from String
+error 927..928: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
+error 940..947: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+error 997..1003: Cannot assign to String from Int32
+error 1022..1032: Cannot assign to String from Int32
+error 1051..1061: Cannot assign to String from Int32
+error 1104..1119: Wrong number of type arguments.  Expected 1
+error 1176..1177: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [Int32, Int32], but got [Int32, String]
+error 1182..1186: No callee matches inputs [Int32] among [<T extends AnyValue>(T, Int32) -> T]
+error 1200..1204: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got [Int32, String]
+error 1209..1216: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+error 1285..1292: Cannot assign to String from Int32
+error 1302..1303: Actual arguments do not match signature: <T extends AnyValue>(List<T>, T) -> T expected [List<Int32>, Int32], but got [List<Int32>, String]
+error 1324..1332: Cannot assign to String from Int32
+error 1349..1358: Cannot assign to Int32 from String
+error 1378..1388: Cannot assign to String from Int32
+Failed: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
 
 === generic classes and methods, as Kotlin Temper reports them
 // `new Box(1)` is solved as a call of `<T>(T) -> Box<T>`, a `Box<Int>`'s
@@ -1497,53 +1504,109 @@ error 1772..1785: Cannot assign to fn (Int32): Boolean from fn (String): Boolean
 error 1837..1844: Expected subtype of fn (Int32): Boolean, but got fn (String): Boolean
 
 === a type parameter no argument binds is checked as its bound
-// As Kotlin Temper's solver binds it, apart from names. Kotlin also says
-// "Expected subtype of AnyValue, but got AnyValue?" for `id(null)` (a).
+// As Kotlin Temper's solver binds it, apart from names. Null alone binds
+// no type parameter, so a bare `T` that only null is passed for is its
+// bound, or what the type wanted binds, which null isn't: "Expected
+// subtype of AnyValue, but got AnyValue?" at the null (a, c to e, and
+// the last), as Kotlin reports it, and so where another argument binds
+// `T` inside a type, which isn't joined (i). A `T?` takes null (g), and
+// type arguments are checked as written (h).
+interface Animal {}
+class Two<A, B>(public a: A, public b: B) {}
 let ap<T>(f: fn (T): T): Int { 1 }
 let two<T>(x: Int, f: fn (T): T): Int { 1 }
 let id<T>(x: T): T { x }
-let f(n: Int?): Void {
+let pet<T extends Animal>(x: T): T { x }
+let opt<T>(x: T?): T? { x }
+let k<T>(xs: List<T>, x: T): T { x }
+let f(n: Int?, ns: List<Int>): Void {
   ap(1);
   two(1, 2);
   two(n, 2);
   let a = id(null);
   let b = id(n);
+  let c = pet(null);
+  let d: Int? = id(null);
+  let e = new Two(null, "s");
+  let g = opt(null);
+  let h = id<Int>(null);
+  let i = k(ns, null);
+  id(null);
 }
 --- settled
 (Block
+  (Interface ^Animal:0)
+  (Class
+    ^Two:1
+    (TypeParam ^A:10)
+    (TypeParam ^B:11)
+    (Param ^a:13 A:10)
+    (Param ^b:14 B:11))
   (Let
-    ^ap:0
-    (Fn (TypeParam ^T:4) (Let ^f:5 (Call FnType T:4 T:4)) Int (Block 1)))
+    ^ap:2
+    (Fn (TypeParam ^T:15) (Let ^f:16 (Call FnType T:15 T:15)) Int (Block 1)))
   (Let
-    ^two:1
+    ^two:3
     (Fn
-      (TypeParam ^T:6)
-      (Let ^x:7 Int)
-      (Let ^f:8 (Call FnType T:6 T:6))
+      (TypeParam ^T:17)
+      (Let ^x:18 Int)
+      (Let ^f:19 (Call FnType T:17 T:17))
       Int
       (Block 1)))
-  (Let ^id:2 (Fn (TypeParam ^T:9) (Let ^x:10 T:9) T:9 (Block x:10)))
+  (Let ^id:4 (Fn (TypeParam ^T:20) (Let ^x:21 T:20) T:20 (Block x:21)))
   (Let
-    ^f:3
+    ^pet:5
+    (Fn (TypeParam ^T:22 Animal:0) (Let ^x:23 T:22) T:22 (Block x:23)))
+  (Let
+    ^opt:6
+    (Fn (TypeParam ^T:24) (Let ^x:25 (Call ? T:24)) (Call ? T:24) (Block x:25)))
+  (Let
+    ^k:7
     (Fn
-      (Let ^n:11 (Call ? Int))
+      (TypeParam ^T:26)
+      (Let ^xs:27 (Call <> List T:26))
+      (Let ^x:28 T:26)
+      T:26
+      (Block x:28)))
+  (Let
+    ^f:8
+    (Fn
+      (Let ^n:29 (Call ? Int))
+      (Let ^ns:30 (Call <> List Int))
       Void
       (Block
-        (Call ap:0 1)
-        (Call two:1 1 2)
-        (Call two:1 n:11 2)
-        (Let ^a:12 (Call id:2 null))
-        (Let ^b:13 (Call id:2 n:11))
+        (Call ap:2 1)
+        (Call two:3 1 2)
+        (Call two:3 n:29 2)
+        (Let ^a:31 (Call id:4 null))
+        (Let ^b:32 (Call id:4 n:29))
+        (Let ^c:33 (Call pet:5 null))
+        (Let ^d:34 (Call ? Int) (Call id:4 null))
+        (Let ^e:35 (Call new Two:1 null "s"))
+        (Let ^g:36 (Call opt:6 null))
+        (Let ^h:37 (Call id:4 \typeArg Int null))
+        (Let ^i:38 (Call k:7 ns:30 null))
+        (Call id:4 null)
         #void))))
-error 279..280: Actual arguments do not match signature: <T extends AnyValue>(fn (T): T) -> Int32 expected [fn (AnyValue): AnyValue], but got [Int32]
-error 292..293: Actual arguments do not match signature: <T extends AnyValue>(Int32, fn (T): T) -> Int32 expected [Int32, fn (AnyValue): AnyValue], but got [Int32, Int32]
-error 302..306: Actual arguments do not match signature: <T extends AnyValue>(Int32, fn (T): T) -> Int32 expected [Int32, fn (AnyValue): AnyValue], but got [Int32?, Int32]
+error 795..796: Actual arguments do not match signature: <T extends AnyValue>(fn (T): T) -> Int32 expected [fn (AnyValue): AnyValue], but got [Int32]
+error 808..809: Actual arguments do not match signature: <T extends AnyValue>(Int32, fn (T): T) -> Int32 expected [Int32, fn (AnyValue): AnyValue], but got [Int32, Int32]
+error 818..822: Actual arguments do not match signature: <T extends AnyValue>(Int32, fn (T): T) -> Int32 expected [Int32, fn (AnyValue): AnyValue], but got [Int32?, Int32]
+error 838..842: Expected subtype of AnyValue, but got AnyValue?
+error 876..880: Expected subtype of Animal, but got Animal?
+error 902..906: Expected subtype of Int32, but got Int32?
+error 927..931: Expected subtype of AnyValue, but got AnyValue?
+error 978..982: Actual arguments do not match signature: <T extends AnyValue>(T) -> T expected [Int32], but got [Int32?]
+error 1001..1005: Expected subtype of Int32, but got Int32?
+error 1013..1017: Expected subtype of AnyValue, but got AnyValue?
 
 === a bound naming its own type parameter is checked with it put in
 // As Kotlin Temper reports them, apart from names: `T extends Ord<T>` and
 // core's `K extends MapKey<K>` are checked as `Ord<P>` and `MapKey<P>`,
 // where a `K extends MapKey<K>` of the caller's own fits. A nullable type
-// fits `AnyValue`, as in Kotlin's check.
+// fits `AnyValue`, as in Kotlin's check. One that nothing at the call
+// binds can't take its bound, which names it, so the call is "Could not
+// infer type actuals" (o, q), as Kotlin reports it, unless the type
+// wanted binds it (r).
 interface Ord<T> { cmp(o: T): Int; }
 class N(public n: Int) extends Ord<N> { public cmp(o: N): Int { n - o.n } }
 class P(public x: Int) {}
@@ -1555,7 +1618,12 @@ let keyed<K extends MapKey<K>, V>(k: K, v: V): Map<K, V> {
   new Map<K, V>([new Pair(k, v)])
 }
 let same<T>(x: T): T { x }
+let none<T extends Ord<T>>(): List<T> { [] }
+let empty<K extends MapKey<K>, V>(): Map<K, V> { new Map<K, V>([]) }
 let f(): Void {
+  let o = none();
+  let q = empty();
+  let r: List<N> = none();
   let a = new Holder<N>(new N(1));
   let b = new Holder<P>(new P(1));
   let c = new Holder(new P(2));
@@ -1610,155 +1678,177 @@ let nb(d: Dog?, e: Dog): Void {
 (Block
   (Interface
     ^Ord:0
-    (TypeParam ^T:18)
-    (Method ^cmp:20 (Signature (Let ^o:21 T:18) Int)))
+    (TypeParam ^T:20)
+    (Method ^cmp:22 (Signature (Let ^o:23 T:20) Int)))
   (Class
     ^N:1
     (Call <> Ord:0 N:1)
-    (Param ^n:23 Int)
+    (Param ^n:25 Int)
     (Method
-      ^cmp:24
-      (Fn (Let ^o:25 N:1) Int (Block (Call - n:23 (Call . o:25 \n))))))
-  (Class ^P:2 (Param ^x:27 Int))
-  (Class ^Holder:3 (TypeParam ^T:28 (Call <> Ord:0 T:28)) (Param ^t:30 T:28))
+      ^cmp:26
+      (Fn (Let ^o:27 N:1) Int (Block (Call - n:25 (Call . o:27 \n))))))
+  (Class ^P:2 (Param ^x:29 Int))
+  (Class ^Holder:3 (TypeParam ^T:30 (Call <> Ord:0 T:30)) (Param ^t:32 T:30))
   (Let
     ^least:4
     (Fn
-      (TypeParam ^T:31 (Call <> Ord:0 T:31))
-      (Let ^a:32 T:31)
-      (Let ^b:33 T:31)
-      T:31
+      (TypeParam ^T:33 (Call <> Ord:0 T:33))
+      (Let ^a:34 T:33)
+      (Let ^b:35 T:33)
+      T:33
       (Block
         (If
-          (Call <= (Call (Call . a:32 \cmp) b:33) 0)
-          (Block a:32)
-          (Block b:33)))))
+          (Call <= (Call (Call . a:34 \cmp) b:35) 0)
+          (Block a:34)
+          (Block b:35)))))
   (Let
     ^keyed:5
     (Fn
-      (TypeParam ^K:34 (Call <> MapKey K:34))
-      (TypeParam ^V:35)
-      (Let ^k:36 K:34)
-      (Let ^v:37 V:35)
-      (Call <> Map K:34 V:35)
+      (TypeParam ^K:36 (Call <> MapKey K:36))
+      (TypeParam ^V:37)
+      (Let ^k:38 K:36)
+      (Let ^v:39 V:37)
+      (Call <> Map K:36 V:37)
       (Block
-        (Let ^b:38 (Call new (Call <> MapBuilder K:34 V:35)))
-        (Call (Call . b:38 \set) k:36 v:37)
-        (Call new (Call <> Map K:34 V:35) (Call list (Call new Pair k:36 v:37))))))
-  (Let ^same:6 (Fn (TypeParam ^T:39) (Let ^x:40 T:39) T:39 (Block x:40)))
+        (Let ^b:40 (Call new (Call <> MapBuilder K:36 V:37)))
+        (Call (Call . b:40 \set) k:38 v:39)
+        (Call new (Call <> Map K:36 V:37) (Call list (Call new Pair k:38 v:39))))))
+  (Let ^same:6 (Fn (TypeParam ^T:41) (Let ^x:42 T:41) T:41 (Block x:42)))
   (Let
-    ^f:7
+    ^none:7
+    (Fn
+      (TypeParam ^T:43 (Call <> Ord:0 T:43))
+      (Call <> List T:43)
+      (Block (Call list))))
+  (Let
+    ^empty:8
+    (Fn
+      (TypeParam ^K:44 (Call <> MapKey K:44))
+      (TypeParam ^V:45)
+      (Call <> Map K:44 V:45)
+      (Block (Call new (Call <> Map K:44 V:45) (Call list)))))
+  (Let
+    ^f:9
     (Fn
       Void
       (Block
-        (Let ^a:41 (Call new (Call <> Holder:3 N:1) (Call new N:1 1)))
-        (Let ^b:42 (Call new (Call <> Holder:3 P:2) (Call new P:2 1)))
-        (Let ^c:43 (Call new Holder:3 (Call new P:2 2)))
-        (Let ^d:44 (Call least:4 (Call new N:1 1) (Call new N:1 2)))
-        (Let ^e:45 (Call least:4 (Call new P:2 1) (Call new P:2 2)))
-        (Let ^g:46 (Call new (Call <> Map P:2 String) (Call list)))
-        (Let ^h:47 (Call new (Call <> MapBuilder P:2 String)))
-        (Let ^i:48 (Call new (Call <> Map String Int) (Call list)))
+        (Let ^o:46 (Call none:7))
+        (Let ^q:47 (Call empty:8))
+        (Let ^r:48 (Call <> List N:1) (Call none:7))
+        (Let ^a:49 (Call new (Call <> Holder:3 N:1) (Call new N:1 1)))
+        (Let ^b:50 (Call new (Call <> Holder:3 P:2) (Call new P:2 1)))
+        (Let ^c:51 (Call new Holder:3 (Call new P:2 2)))
+        (Let ^d:52 (Call least:4 (Call new N:1 1) (Call new N:1 2)))
+        (Let ^e:53 (Call least:4 (Call new P:2 1) (Call new P:2 2)))
+        (Let ^g:54 (Call new (Call <> Map P:2 String) (Call list)))
+        (Let ^h:55 (Call new (Call <> MapBuilder P:2 String)))
+        (Let ^i:56 (Call new (Call <> Map String Int) (Call list)))
         (Let
-          ^j:49
+          ^j:57
           (Call new Map (Call list (Call new Pair (Call new P:2 1) "a"))))
-        (Let ^k:50 (Call new (Call <> MapBuilder Int64 String)))
-        (Let ^l:51 (Call keyed:5 1 "a"))
-        (Let ^m:52 (Call new (Call <> PromiseBuilder (Call ? String))))
-        (Let ^n:53 (Call same:6 \typeArg (Call ? Int) null))
+        (Let ^k:58 (Call new (Call <> MapBuilder Int64 String)))
+        (Let ^l:59 (Call keyed:5 1 "a"))
+        (Let ^m:60 (Call new (Call <> PromiseBuilder (Call ? String))))
+        (Let ^n:61 (Call same:6 \typeArg (Call ? Int) null))
         #void)))
-  (Interface ^Animal:8)
-  (Class ^Dog:9 Animal:8)
-  (Class ^Pen:10 (TypeParam ^T:56 Animal:8) (Param ^t:58 T:56))
+  (Interface ^Animal:10)
+  (Class ^Dog:11 Animal:10)
+  (Class ^Pen:12 (TypeParam ^T:64 Animal:10) (Param ^t:66 T:64))
   (Let
-    ^pick:11
-    (Fn (TypeParam ^T:59 Animal:8) (Let ^x:60 T:59) T:59 (Block x:60)))
+    ^pick:13
+    (Fn (TypeParam ^T:67 Animal:10) (Let ^x:68 T:67) T:67 (Block x:68)))
   (Let
-    ^opt:12
+    ^opt:14
     (Fn
-      (TypeParam ^T:61 Animal:8)
-      (Let ^x:62 (Call ? T:61))
-      (Call ? T:61)
-      (Block x:62)))
+      (TypeParam ^T:69 Animal:10)
+      (Let ^x:70 (Call ? T:69))
+      (Call ? T:69)
+      (Block x:70)))
   (Let
-    ^fwd:13
+    ^fwd:15
     (Fn
-      (TypeParam ^T:63 Animal:8)
-      (Let ^x:64 T:63)
-      T:63
-      (Block (Call pick:11 x:64))))
+      (TypeParam ^T:71 Animal:10)
+      (Let ^x:72 T:71)
+      T:71
+      (Block (Call pick:13 x:72))))
   (Let
-    ^fwdn:14
+    ^fwdn:16
     (Fn
-      (TypeParam ^T:65 Animal:8)
-      (Let ^x:66 (Call ? T:65))
-      (Call ? T:65)
-      (Block (Call pick:11 x:66))))
+      (TypeParam ^T:73 Animal:10)
+      (Let ^x:74 (Call ? T:73))
+      (Call ? T:73)
+      (Block (Call pick:13 x:74))))
   (Let
-    ^both:15
-    (Fn (TypeParam ^T:67) (Let ^a:68 T:67) (Let ^b:69 T:67) T:67 (Block a:68)))
+    ^both:17
+    (Fn (TypeParam ^T:75) (Let ^a:76 T:75) (Let ^b:77 T:75) T:75 (Block a:76)))
   (Let
-    ^pickBoth:16
+    ^pickBoth:18
     (Fn
-      (TypeParam ^T:70 Animal:8)
-      (Let ^a:71 T:70)
-      (Let ^b:72 T:70)
-      T:70
-      (Block a:71)))
+      (TypeParam ^T:78 Animal:10)
+      (Let ^a:79 T:78)
+      (Let ^b:80 T:78)
+      T:78
+      (Block a:79)))
   (Let
-    ^nb:17
+    ^nb:19
     (Fn
-      (Let ^d:73 (Call ? Dog:9))
-      (Let ^e:74 Dog:9)
+      (Let ^d:81 (Call ? Dog:11))
+      (Let ^e:82 Dog:11)
       Void
       (Block
-        (Let ^a:75 (Call pick:11 d:73))
-        (Let ^b:76 (Call new Pen:10 d:73))
-        (Let ^c:77 (Call pick:11 \typeArg Dog:9 d:73))
-        (Let ^g:78 (Call new (Call <> Pen:10 Dog:9) d:73))
-        (Let ^h:79 (Call pick:11 \typeArg (Call ? Dog:9) d:73))
-        (Let ^i:80 (Call ? Animal:8) (Call pick:11 d:73))
-        (Call pick:11 d:73)
-        (Let ^j:81 (Call pick:11 e:74))
-        (Let ^k:82 (Call same:6 d:73))
-        (Let ^l:83 (Call new Pen:10 e:74))
-        (Let ^m:84 (Call opt:12 d:73))
-        (Let ^n:85 (Call opt:12 null))
-        (Let ^o:86 (Call ? Dog:9) (Call same:6 d:73))
-        (Let ^q:87 (Call list d:73 e:74))
-        (Let ^r:88 (Call <> List (Call ? Dog:9)) q:87)
-        (Let ^s:89 (Call both:15 e:74 d:73))
-        (Let ^t:90 Int (Call both:15 d:73 e:74))
-        (Let ^u:91 (Call pickBoth:16 e:74 d:73))
+        (Let ^a:83 (Call pick:13 d:81))
+        (Let ^b:84 (Call new Pen:12 d:81))
+        (Let ^c:85 (Call pick:13 \typeArg Dog:11 d:81))
+        (Let ^g:86 (Call new (Call <> Pen:12 Dog:11) d:81))
+        (Let ^h:87 (Call pick:13 \typeArg (Call ? Dog:11) d:81))
+        (Let ^i:88 (Call ? Animal:10) (Call pick:13 d:81))
+        (Call pick:13 d:81)
+        (Let ^j:89 (Call pick:13 e:82))
+        (Let ^k:90 (Call same:6 d:81))
+        (Let ^l:91 (Call new Pen:12 e:82))
+        (Let ^m:92 (Call opt:14 d:81))
+        (Let ^n:93 (Call opt:14 null))
+        (Let ^o:94 (Call ? Dog:11) (Call same:6 d:81))
+        (Let ^q:95 (Call list d:81 e:82))
+        (Let ^r:96 (Call <> List (Call ? Dog:11)) q:95)
+        (Let ^s:97 (Call both:17 e:82 d:81))
+        (Let ^t:98 Int (Call both:17 d:81 e:82))
+        (Let ^u:99 (Call pickBoth:18 e:82 d:81))
         #void))))
-error 763..786: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
-error 798..818: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
-error 867..892: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
-error 904..926: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
-error 938..965: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
-error 1013..1047: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
-error 1059..1090: Type formal <K extends MapKey<K>> cannot bind to Int64 which does not fit upper bounds [MapKey<K>]
-error 1898..1905: Type formal <T extends Animal> cannot bind to T? which does not fit upper bounds [Animal]
-error 2035..2042: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
-error 2054..2064: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
-error 2086..2087: Actual arguments do not match signature: <T extends Animal>(T) -> T expected [Dog], but got [Dog?]
-error 2113..2114: Actual arguments do not match signature: <T extends Animal>(T) -> Pen<T> expected [Dog], but got [Dog?]
-error 2127..2140: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
-error 2161..2168: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
-error 2172..2179: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
-error 2385..2395: Cannot assign to Int32 from Dog?
-error 2407..2421: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 1037..1043: Could not infer type actuals for <T extends Ord<T>>() -> List<T> given [] in context unknown
+error 1055..1062: Could not infer type actuals for <K extends MapKey<K>, V extends AnyValue>() -> Map<K, V> given [] in context unknown
+error 1136..1159: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 1171..1191: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 1240..1265: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 1277..1299: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 1311..1338: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 1386..1420: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 1432..1463: Type formal <K extends MapKey<K>> cannot bind to Int64 which does not fit upper bounds [MapKey<K>]
+error 2271..2278: Type formal <T extends Animal> cannot bind to T? which does not fit upper bounds [Animal]
+error 2408..2415: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 2427..2437: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 2459..2460: Actual arguments do not match signature: <T extends Animal>(T) -> T expected [Dog], but got [Dog?]
+error 2486..2487: Actual arguments do not match signature: <T extends Animal>(T) -> Pen<T> expected [Dog], but got [Dog?]
+error 2500..2513: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 2534..2541: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 2545..2552: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 2758..2768: Cannot assign to Int32 from Dog?
+error 2780..2794: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
 
 === list literals' types, as Kotlin Temper reports them
 // A list literal is a `List` of its elements' common type. The input was
 // also built with Kotlin Temper: every error matches in message and
 // position, apart from names (Kotlin: `Animal__0`). Kotlin also reports
 // `null` in a list, as in a3, "Expected subtype of Int32, but got
-// Int32?", a bug, and gives b1 its elements' common supertype, `Animal`,
-// and b2 and b3 `AnyValue`, where tempest doesn't know one yet.
+// Int32?", a bug. As for a call of `<listT>(listT, …) -> List<listT>`,
+// elements that can't be told apart once joined are an error (b2, b4,
+// b8), the list a `List<AnyValue>`, but other classes join to `AnyValue`
+// (b9); `[]` with nothing wanted is a `List<AnyValue>` (b3, b5, b6), and
+// null alone is no element type (b7), as Kotlin reports them.
 interface Animal {}
 class Dog extends Animal {}
 class Cat extends Animal {}
+class Rock {}
 let f(d: Dog, c: Cat, a: Animal, n: Int?): Void {
   let a1 = [1, 2];
   let a2: Int = a1;
@@ -1771,6 +1861,12 @@ let f(d: Dog, c: Cat, a: Animal, n: Int?): Void {
   let b1: Int = [d, c];
   let b2: Int = [1, "a"];
   let b3: Int = [];
+  let b4 = [1, "a"];
+  let b5 = [];
+  let b6: List = [];
+  let b7 = [null];
+  let b8 = [[1], ["a"]];
+  let b9: Int = [d, new Rock()];
   let c1: Int = [1, 2].length;
   let c2: String = [1, 2][0];
 }
@@ -1779,38 +1875,52 @@ let f(d: Dog, c: Cat, a: Animal, n: Int?): Void {
   (Interface ^Animal:0)
   (Class ^Dog:1 Animal:0)
   (Class ^Cat:2 Animal:0)
+  (Class ^Rock:3)
   (Let
-    ^f:3
+    ^f:4
     (Fn
-      (Let ^d:7 Dog:1)
-      (Let ^c:8 Cat:2)
-      (Let ^a:9 Animal:0)
-      (Let ^n:10 (Call ? Int))
+      (Let ^d:9 Dog:1)
+      (Let ^c:10 Cat:2)
+      (Let ^a:11 Animal:0)
+      (Let ^n:12 (Call ? Int))
       Void
       (Block
-        (Let ^a1:11 (Call list 1 2))
-        (Let ^a2:12 Int a1:11)
-        (Let ^a3:13 Int (Call list 1 null))
-        (Let ^a4:14 Int (Call list n:10 1))
-        (Let ^a5:15 Int (Call list d:7 a:9))
-        (Let ^a6:16 Int (Call list (Call list 1)))
-        (Let ^a7:17 Int (Call list (Call panic) 1))
-        (Let ^a8:18 (Call <> ListBuilder Int) (Call list 1))
-        (Let ^b1:19 Int (Call list d:7 c:8))
-        (Let ^b2:20 Int (Call list 1 "a"))
-        (Let ^b3:21 Int (Call list))
-        (Let ^c1:22 Int (Call . (Call list 1 2) \length))
-        (Let ^c2:23 String (Call [] (Call list 1 2) 0))
+        (Let ^a1:13 (Call list 1 2))
+        (Let ^a2:14 Int a1:13)
+        (Let ^a3:15 Int (Call list 1 null))
+        (Let ^a4:16 Int (Call list n:12 1))
+        (Let ^a5:17 Int (Call list d:9 a:11))
+        (Let ^a6:18 Int (Call list (Call list 1)))
+        (Let ^a7:19 Int (Call list (Call panic) 1))
+        (Let ^a8:20 (Call <> ListBuilder Int) (Call list 1))
+        (Let ^b1:21 Int (Call list d:9 c:10))
+        (Let ^b2:22 Int (Call list 1 "a"))
+        (Let ^b3:23 Int (Call list))
+        (Let ^b4:24 (Call list 1 "a"))
+        (Let ^b5:25 (Call list))
+        (Let ^b6:26 List (Call list))
+        (Let ^b7:27 (Call list null))
+        (Let ^b8:28 (Call list (Call list 1) (Call list "a")))
+        (Let ^b9:29 Int (Call list d:9 (Call new Rock:3)))
+        (Let ^c1:30 Int (Call . (Call list 1 2) \length))
+        (Let ^c2:31 String (Call [] (Call list 1 2) 0))
         #void))))
-error 583..585: Cannot assign to Int32 from List<Int32>
-error 603..612: Cannot assign to Int32 from List<Int32?>
-error 630..636: Cannot assign to Int32 from List<Int32?>
-error 654..660: Cannot assign to Int32 from List<Animal>
-error 678..683: Cannot assign to Int32 from List<List<Int32>>
-error 701..713: Cannot assign to Int32 from List<Int32>
-error 744..747: Cannot assign to ListBuilder<Int32> from List<Int32>
-error 765..771: Cannot assign to Int32 from List<Animal>
-error 869..878: Cannot assign to String from Int32
+error 814..816: Cannot assign to Int32 from List<Int32>
+error 834..843: Cannot assign to Int32 from List<Int32?>
+error 861..867: Cannot assign to Int32 from List<Int32?>
+error 885..891: Cannot assign to Int32 from List<Animal>
+error 909..914: Cannot assign to Int32 from List<List<Int32>>
+error 932..944: Cannot assign to Int32 from List<Int32>
+error 975..978: Cannot assign to ListBuilder<Int32> from List<Int32>
+error 996..1002: Cannot assign to Int32 from List<Animal>
+error 1020..1028: listT is bound to both Int32 and String, which can't be told apart once joined; give listT explicitly
+error 1020..1028: Cannot assign to Int32 from List<AnyValue>
+error 1046..1048: Cannot assign to Int32 from List<AnyValue>
+error 1061..1069: listT is bound to both Int32 and String, which can't be told apart once joined; give listT explicitly
+error 1119..1123: Expected subtype of AnyValue, but got AnyValue?
+error 1137..1149: listT is bound to both List<Int32> and List<String>, which can't be told apart once joined; give listT explicitly
+error 1167..1182: Cannot assign to Int32 from List<AnyValue>
+error 1234..1243: Cannot assign to String from Int32
 
 === list literals typed from the type wanted, as Kotlin Temper reports them
 // Target typing: the type a list literal's place wants gives its element
@@ -1911,7 +2021,7 @@ error 1111..1112: Actual arguments do not match signature: <listT extends AnyVal
 error 1155..1158: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [List<String>, List<String>], but got [List<String>, List<Int32>]
 error 1199..1202: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [List<Animal>, List<Animal>], but got [List<Animal>, List<Int32>]
 error 1242..1245: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [List<String>, List<String>], but got [List<String>, List<Int32>]
-error 1252..1255: Expected subtype of List<String>, but got List<Int32>
+error 1253..1254: Actual arguments do not match signature: <listT extends AnyValue>(listT) -> List<listT> expected [String], but got [Int32]
 
 === function literals typed from the type wanted, as Kotlin Temper reports them
 // Target typing: a function literal's parameters without types, and its
@@ -3479,3 +3589,1619 @@ error 903..924: Type GPlain has method fail with signature fail(): T, but it sho
 error 939..944: Never needs the type it stands for, as Never<Int> or Never<Void>
 error 974..979: Never needs the type it stands for, as Never<Int> or Never<Void>
 log 1
+
+=== list literal arguments checked against the type wanted
+// A list literal's elements are checked against the element type its
+// place wants, an argument's too, nullable or not: constructors,
+// functions, methods, object literals' properties, and generic calls
+// once their type arguments are known. Elements with no common type,
+// as `["a", 3]`, are reported at the elements that don't fit, not
+// passed as a list of unknown elements.
+class Opts(public names: List<String>?) {}
+class Req(public names: List<String>) {}
+class Box<T>(public item: T) {}
+class Svc {
+  public put(xs: List<String>?): Void {}
+}
+let takeN(xs: List<String>?): Void {}
+let take(xs: List<String>): Void {}
+let nested(xss: List<List<String>>?): Void {}
+let boxed(b: Box<List<String>>): Void {}
+let f(s: Svc): Void {
+  new Opts(["a", 3]);
+  let o: Opts = { names: ["a", 3] };
+  new Req(["a", 3]);
+  takeN(["a", 3]);
+  take(["a", 3]);
+  take([1]);
+  s.put([true, "b"]);
+  nested([["a"], ["b", 2]]);
+  new Box<List<String>>(["a", 3]);
+  let b: Box<List<String>> = new Box(["a", 3]);
+  boxed(new Box(["a", 3]));
+  takeN(["a", "b"]);
+  takeN([]);
+  new Opts(null);
+}
+--- settled
+(Block
+  (Class ^Opts:0 (Param ^names:10 (Call ? (Call <> List String))))
+  (Class ^Req:1 (Param ^names:12 (Call <> List String)))
+  (Class ^Box:2 (TypeParam ^T:13) (Param ^item:15 T:13))
+  (Class
+    ^Svc:3
+    (Method
+      ^put:17
+      (Fn (Let ^xs:18 (Call ? (Call <> List String))) Void (Block))))
+  (Let ^takeN:4 (Fn (Let ^xs:19 (Call ? (Call <> List String))) Void (Block)))
+  (Let ^take:5 (Fn (Let ^xs:20 (Call <> List String)) Void (Block)))
+  (Let
+    ^nested:6
+    (Fn
+      (Let ^xss:21 (Call ? (Call <> List (Call <> List String))))
+      Void
+      (Block)))
+  (Let
+    ^boxed:7
+    (Fn (Let ^b:22 (Call <> Box:2 (Call <> List String))) Void (Block)))
+  (Let
+    ^f:8
+    (Fn
+      (Let ^s:23 Svc:3)
+      Void
+      (Block
+        (Call new Opts:0 (Call list "a" 3))
+        (Let ^o:24 Opts:0 (Call new Opts:0 (Call list "a" 3)))
+        (Call new Req:1 (Call list "a" 3))
+        (Call takeN:4 (Call list "a" 3))
+        (Call take:5 (Call list "a" 3))
+        (Call take:5 (Call list 1))
+        (Call (Call . s:23 \put) (Call list true "b"))
+        (Call nested:6 (Call list (Call list "a") (Call list "b" 2)))
+        (Call new (Call <> Box:2 (Call <> List String)) (Call list "a" 3))
+        (Let
+          ^b:25
+          (Call <> Box:2 (Call <> List String))
+          (Call new Box:2 (Call list "a" 3)))
+        (Call boxed:7 (Call new Box:2 (Call list "a" 3)))
+        (Call takeN:4 (Call list "a" "b"))
+        (Call takeN:4 (Call list))
+        (Call new Opts:0 null)
+        #void))))
+error 755..756: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [String, String], but got [String, Int32]
+error 791..792: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [String, String], but got [String, Int32]
+error 813..814: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [String, String], but got [String, Int32]
+error 832..833: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [String, String], but got [String, Int32]
+error 850..851: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [String, String], but got [String, Int32]
+error 863..864: Actual arguments do not match signature: <listT extends AnyValue>(listT) -> List<listT> expected [String], but got [Int32]
+error 877..881: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [String, String], but got [Boolean, String]
+error 913..914: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [String, String], but got [String, Int32]
+error 949..950: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [String, String], but got [String, Int32]
+error 997..998: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [String, String], but got [String, Int32]
+error 1024..1025: Actual arguments do not match signature: <listT extends AnyValue>(listT, listT) -> List<listT> expected [String, String], but got [String, Int32]
+
+=== a list literal is typed from a wanted List, not a Listed
+// As in Kotlin Temper, by design: a list literal takes the element type
+// of a `List` its place wants, but where a `Listed<P>` is wanted, it's a
+// list of its elements' type, as `List<A>`, which isn't a `Listed<P>`
+// (`Listed` is invariant), so `[new A(1)]` must be `[a]` for an `a: P`,
+// or the place must want a `List<P>`. Elements that don't fit `P` are
+// reported at the elements, as for a `List`.
+interface P {}
+class A(public n: Int) extends P {}
+class LOpts(public ps: Listed<P>) {}
+let takeL(ps: Listed<P>): Void {}
+let takeLN(ps: Listed<P>?): Void {}
+let takeLP(ps: List<P>): Void {}
+let f(p: P): Void {
+  takeL([new A(1)]);
+  takeLN([new A(1)]);
+  new LOpts([new A(1)]);
+  let ls: Listed<P> = [new A(1)];
+  let ss: Listed<String> = [1];
+  takeL([p]);
+  takeLP([new A(1)]);
+  let empty: Listed<P> = [];
+  let ok: Listed<A> = [new A(1)];
+}
+--- settled
+(Block
+  (Interface ^P:0)
+  (Class ^A:1 P:0 (Param ^n:9 Int))
+  (Class ^LOpts:2 (Param ^ps:11 (Call <> Listed P:0)))
+  (Let ^takeL:3 (Fn (Let ^ps:12 (Call <> Listed P:0)) Void (Block)))
+  (Let ^takeLN:4 (Fn (Let ^ps:13 (Call ? (Call <> Listed P:0))) Void (Block)))
+  (Let ^takeLP:5 (Fn (Let ^ps:14 (Call <> List P:0)) Void (Block)))
+  (Let
+    ^f:6
+    (Fn
+      (Let ^p:15 P:0)
+      Void
+      (Block
+        (Call takeL:3 (Call list (Call new A:1 1)))
+        (Call takeLN:4 (Call list (Call new A:1 1)))
+        (Call new LOpts:2 (Call list (Call new A:1 1)))
+        (Let ^ls:16 (Call <> Listed P:0) (Call list (Call new A:1 1)))
+        (Let ^ss:17 (Call <> Listed String) (Call list 1))
+        (Call takeL:3 (Call list p:15))
+        (Call takeLP:5 (Call list (Call new A:1 1)))
+        (Let ^empty:18 (Call <> Listed P:0) (Call list))
+        (Let ^ok:19 (Call <> Listed A:1) (Call list (Call new A:1 1)))
+        #void))))
+error 627..637: Expected subtype of Listed<P>, but got List<A>
+error 649..659: Expected subtype of Listed<P>?, but got List<A>
+error 674..684: Expected subtype of Listed<P>, but got List<A>
+error 709..719: Cannot assign to Listed<P> from List<A>
+error 749..750: Actual arguments do not match signature: <listT extends AnyValue>(listT) -> List<listT> expected [String], but got [Int32]
+
+=== type parameters are invariant
+// A `Box<Dog>` is no `Box<Animal>`, nor a `List<Dog>` a `List<Animal>`
+// or a `Listed<Animal>`, and so for core's generic types that Kotlin
+// Temper marks `@out` or `@in` (`Map`, `Mapped`, `Pair`, the generators,
+// their results, and `Promise`). A `SafeGenerator<Dog>` is a
+// `Generator<Dog>`, and a `DoneResult<Dog>` a `GeneratorResult<Dog>`, by
+// what they extend.
+interface Animal {}
+class Dog extends Animal {}
+class Box<T>(public item: T) {}
+let f(b: Box<Dog>, lb: ListBuilder<Dog>, ls: List<Dog>): Void {
+  let b1: Box<Animal> = b;
+  let b2: Box<Dog?> = b;
+  let l1: Listed<Animal> = lb;
+  let l2: Listed<Animal> = ls;
+  let l3: List<Animal> = ls;
+  let l4: Listed<Dog> = ls;
+  let l5: List<Dog?> = ls;
+}
+let g(m: Map<String, Dog>, p: Pair<String, Dog>, gen: Generator<Dog>, sg: SafeGenerator<Dog>): Void {
+  let m1: Map<String, Animal> = m;
+  let m2: Mapped<String, Animal> = m;
+  let p1: Pair<String, Animal> = p;
+  let g1: Generator<Animal> = gen;
+  let g2: Generator<Animal> = sg;
+  let g3: Generator<Dog> = sg;
+}
+let h(r: GeneratorResult<Dog>, v: ValueResult<Dog>, d: DoneResult<Dog>, pr: Promise<Dog>): Void {
+  let r1: GeneratorResult<Animal> = r;
+  let r2: GeneratorResult<Animal> = v;
+  let r3: GeneratorResult<Animal> = d;
+  let r4: GeneratorResult<Dog> = d;
+  let pr1: Promise<Animal> = pr;
+}
+--- settled
+(Block
+  (Interface ^Animal:0)
+  (Class ^Dog:1 Animal:0)
+  (Class ^Box:2 (TypeParam ^T:8) (Param ^item:10 T:8))
+  (Let
+    ^f:3
+    (Fn
+      (Let ^b:11 (Call <> Box:2 Dog:1))
+      (Let ^lb:12 (Call <> ListBuilder Dog:1))
+      (Let ^ls:13 (Call <> List Dog:1))
+      Void
+      (Block
+        (Let ^b1:14 (Call <> Box:2 Animal:0) b:11)
+        (Let ^b2:15 (Call <> Box:2 (Call ? Dog:1)) b:11)
+        (Let ^l1:16 (Call <> Listed Animal:0) lb:12)
+        (Let ^l2:17 (Call <> Listed Animal:0) ls:13)
+        (Let ^l3:18 (Call <> List Animal:0) ls:13)
+        (Let ^l4:19 (Call <> Listed Dog:1) ls:13)
+        (Let ^l5:20 (Call <> List (Call ? Dog:1)) ls:13)
+        #void)))
+  (Let
+    ^g:4
+    (Fn
+      (Let ^m:21 (Call <> Map String Dog:1))
+      (Let ^p:22 (Call <> Pair String Dog:1))
+      (Let ^gen:23 (Call <> Generator Dog:1))
+      (Let ^sg:24 (Call <> SafeGenerator Dog:1))
+      Void
+      (Block
+        (Let ^m1:25 (Call <> Map String Animal:0) m:21)
+        (Let ^m2:26 (Call <> Mapped String Animal:0) m:21)
+        (Let ^p1:27 (Call <> Pair String Animal:0) p:22)
+        (Let ^g1:28 (Call <> Generator Animal:0) gen:23)
+        (Let ^g2:29 (Call <> Generator Animal:0) sg:24)
+        (Let ^g3:30 (Call <> Generator Dog:1) sg:24)
+        #void)))
+  (Let
+    ^h:5
+    (Fn
+      (Let ^r:31 (Call <> GeneratorResult Dog:1))
+      (Let ^v:32 (Call <> ValueResult Dog:1))
+      (Let ^d:33 (Call <> DoneResult Dog:1))
+      (Let ^pr:34 (Call <> Promise Dog:1))
+      Void
+      (Block
+        (Let ^r1:35 (Call <> GeneratorResult Animal:0) r:31)
+        (Let ^r2:36 (Call <> GeneratorResult Animal:0) v:32)
+        (Let ^r3:37 (Call <> GeneratorResult Animal:0) d:33)
+        (Let ^r4:38 (Call <> GeneratorResult Dog:1) d:33)
+        (Let ^pr1:39 (Call <> Promise Animal:0) pr:34)
+        #void))))
+error 541..542: Cannot assign to Box<Animal> from Box<Dog>
+error 566..567: Cannot assign to Box<Dog?> from Box<Dog>
+error 596..598: Cannot assign to Listed<Animal> from ListBuilder<Dog>
+error 627..629: Cannot assign to Listed<Animal> from List<Dog>
+error 656..658: Cannot assign to List<Animal> from List<Dog>
+error 711..713: Cannot assign to List<Dog?> from List<Dog>
+error 851..852: Cannot assign to Map<String, Animal> from Map<String, Dog>
+error 889..890: Cannot assign to Mapped<String, Animal> from Map<String, Dog>
+error 925..926: Cannot assign to Pair<String, Animal> from Pair<String, Dog>
+error 958..961: Cannot assign to Generator<Animal> from Generator<Dog>
+error 993..995: Cannot assign to Generator<Animal> from SafeGenerator<Dog>
+error 1164..1165: Cannot assign to GeneratorResult<Animal> from GeneratorResult<Dog>
+error 1203..1204: Cannot assign to GeneratorResult<Animal> from ValueResult<Dog>
+error 1242..1243: Cannot assign to GeneratorResult<Animal> from DoneResult<Dog>
+error 1310..1312: Cannot assign to Promise<Animal> from Promise<Dog>
+
+=== @out and @in are ordinary decorators on type parameters
+// Temper 0.6.0's variance markers no longer mean anything: like any other
+// decorator on a type parameter, they change nothing, and a `Crate<Dog>`
+// is no `Crate<Animal>`.
+interface Animal {}
+class Dog extends Animal {}
+class Crate<@out T>(public item: T) {}
+class Sink<@in T> {}
+class Tagged<@other T> {}
+let f(c: Crate<Dog>, s: Sink<Animal>, t: Tagged<Dog>): Void {
+  let c1: Crate<Animal> = c;
+  let s1: Sink<Dog> = s;
+  let t1: Tagged<Animal> = t;
+}
+--- settled
+(Block
+  (Interface ^Animal:0)
+  (Class ^Dog:1 Animal:0)
+  (Class ^Crate:2 (TypeParam ^T:8) (Param ^item:10 T:8))
+  (Class ^Sink:3 (TypeParam ^T:11))
+  (Class ^Tagged:4 (TypeParam ^T:13))
+  (Let
+    ^f:5
+    (Fn
+      (Let ^c:15 (Call <> Crate:2 Dog:1))
+      (Let ^s:16 (Call <> Sink:3 Animal:0))
+      (Let ^t:17 (Call <> Tagged:4 Dog:1))
+      Void
+      (Block
+        (Let ^c1:18 (Call <> Crate:2 Animal:0) c:15)
+        (Let ^s1:19 (Call <> Sink:3 Dog:1) s:16)
+        (Let ^t1:20 (Call <> Tagged:4 Animal:0) t:17)
+        #void))))
+error 397..398: Cannot assign to Crate<Animal> from Crate<Dog>
+error 422..423: Cannot assign to Sink<Dog> from Sink<Animal>
+error 452..453: Cannot assign to Tagged<Animal> from Tagged<Dog>
+
+=== core's generators and results work without variance
+// What core's generators and their results need: `doneResult()`, `new
+// DoneResult()` and `new ValueResult(1)` take their type argument from
+// the type wanted, a `SafeGenerator<Int>` is a `Generator<Int>`, a `when`
+// narrows a result to a `ValueResult<Int>`, and a generator function's
+// block makes a `SafeGenerator`. Only `r` is an error.
+let pull(g: Generator<Int>): GeneratorResult<Int> throws Bubble { g.next() }
+let done(): GeneratorResult<Int> { doneResult() }
+let done2(): GeneratorResult<Int> { new DoneResult() }
+let value(): GeneratorResult<Int> { new ValueResult(1) }
+let safe(g: SafeGenerator<Int>): Generator<Int> { g }
+let first(r: GeneratorResult<Int>): Int {
+  when (r) {
+    is ValueResult<Int> -> r.value;
+    else -> 0;
+  }
+}
+let run(body: fn (): SafeGenerator<Int>): Int { first(body().nextSafe()) }
+let ran = run { (): GeneratorResult<Int> extends GeneratorFn =>
+  yield();
+};
+let r(): GeneratorResult<AnyValue> { new ValueResult<Int>(1) }
+--- settled
+(Block
+  (Let
+    ^pull:0
+    (Fn
+      (Let ^g:9 (Call <> Generator Int))
+      (Call throws (Call <> GeneratorResult Int) Bubble)
+      (Block (Call (Call . g:9 \next)))))
+  (Let ^done:1 (Fn (Call <> GeneratorResult Int) (Block (Call doneResult))))
+  (Let
+    ^done2:2
+    (Fn (Call <> GeneratorResult Int) (Block (Call new DoneResult))))
+  (Let
+    ^value:3
+    (Fn (Call <> GeneratorResult Int) (Block (Call new ValueResult 1))))
+  (Let
+    ^safe:4
+    (Fn
+      (Let ^g:10 (Call <> SafeGenerator Int))
+      (Call <> Generator Int)
+      (Block g:10)))
+  (Let
+    ^first:5
+    (Fn
+      (Let ^r:11 (Call <> GeneratorResult Int))
+      Int
+      (Block
+        (Block
+          (If (Call is r:11 (Call <> ValueResult Int)) (Call . r:11 \value) 0)))))
+  (Let
+    ^run:6
+    (Fn
+      (Let ^body:12 (Call FnType (Call <> SafeGenerator Int)))
+      Int
+      (Block (Call first:5 (Call (Call . (Call body:12) \nextSafe))))))
+  (Let
+    ^ran:7
+    (Call
+      run:6
+      (Fn
+        (Call <> GeneratorResult Int)
+        GeneratorFn
+        (Block (Yield @840 #null) #void))))
+  (Let
+    ^r:8
+    (Fn
+      (Call <> GeneratorResult AnyValue)
+      (Block (Call new (Call <> ValueResult Int) 1)))))
+error 941..964: Cannot assign to GeneratorResult<AnyValue> from ValueResult<Int32>
+
+=== Never<A> is a Never<B> where A is a B, by its own rule
+// `Never` has no values, so a `Never<Dog>` is a `Never<Animal>`, and a
+// `Dog`, with nothing that variance could get wrong; but a
+// `Never<Animal>` isn't a `Never<Dog>` or a `Dog`, as a backend without a
+// bottom type writes it as its `T`. `List<Dog>` isn't a `List<Animal>`
+// inside it either.
+interface Animal {}
+class Dog extends Animal {}
+let stopDog(): Never<Dog> { panic() }
+let stopAnimal(): Never<Animal> { panic() }
+let stopDogs(): Never<List<Dog>> { panic() }
+let a1(): Never<Animal> { stopDog() }
+let a2(): Animal { stopDog() }
+let a3(): Never<Dog> { stopAnimal() }
+let a4(): Dog { stopAnimal() }
+let a5(): Never<List<Animal>> { stopDogs() }
+let a6(): Never<List<Dog>> { stopDogs() }
+--- settled
+(Block
+  (Interface ^Animal:0)
+  (Class ^Dog:1 Animal:0)
+  (Let ^stopDog:2 (Fn (Call <> Never Dog:1) (Block (Call panic))))
+  (Let ^stopAnimal:3 (Fn (Call <> Never Animal:0) (Block (Call panic))))
+  (Let
+    ^stopDogs:4
+    (Fn (Call <> Never (Call <> List Dog:1)) (Block (Call panic))))
+  (Let ^a1:5 (Fn (Call <> Never Animal:0) (Block (Call stopDog:2))))
+  (Let ^a2:6 (Fn Animal:0 (Block (Call stopDog:2))))
+  (Let ^a3:7 (Fn (Call <> Never Dog:1) (Block (Call stopAnimal:3))))
+  (Let ^a4:8 (Fn Dog:1 (Block (Call stopAnimal:3))))
+  (Let
+    ^a5:9
+    (Fn (Call <> Never (Call <> List Animal:0)) (Block (Call stopDogs:4))))
+  (Let
+    ^a6:10
+    (Fn (Call <> Never (Call <> List Dog:1)) (Block (Call stopDogs:4)))))
+error 567..579: Cannot assign to Never<Dog> from Never<Animal>
+error 598..610: Cannot assign to Dog from Never<Animal>
+error 645..655: Cannot assign to Never<List<Animal>> from Never<List<Dog>>
+
+=== generic calls with the wrong number of type arguments
+// Too many are reported at the call, for functions, methods and
+// constructors; the call's type parameters stay unknown, so nothing else
+// is reported. Too few are fine, the rest inferred, as `E`, which nothing
+// binds, is its bound for `apply<Int, Int>`.
+class Box<T>(public item: T) {}
+class Order {
+  public first<T>(items: List<T>): T { items[0] }
+}
+let apply<T, R, E>(x: T, f: fn (T): R): R { f(x) }
+let id<T>(x: T): T { x }
+let f(n: Int, o: Order, xs: List<Int>): Void {
+  apply<Int, Int>(n) { x => 10 / x };
+  apply<Int, Int>(n, fn (x: Int): Int { x });
+  id<Int, String>(n);
+  id<Int, String>(1);
+  new Box<Int, Int>(n);
+  o.first<Int, Int>(xs);
+  apply<Int, Int, Never<Void>>(n) { x => x };
+}
+--- settled
+(Block
+  (Class ^Box:0 (TypeParam ^T:5) (Param ^item:7 T:5))
+  (Class
+    ^Order:1
+    (Method
+      ^first:9
+      (Fn
+        (TypeParam ^T:10)
+        (Let ^items:11 (Call <> List T:10))
+        T:10
+        (Block (Call [] items:11 0)))))
+  (Let
+    ^apply:2
+    (Fn
+      (TypeParam ^T:12)
+      (TypeParam ^R:13)
+      (TypeParam ^E:14)
+      (Let ^x:15 T:12)
+      (Let ^f:16 (Call FnType T:12 R:13))
+      R:13
+      (Block (Call f:16 x:15))))
+  (Let ^id:3 (Fn (TypeParam ^T:17) (Let ^x:18 T:17) T:17 (Block x:18)))
+  (Let
+    ^f:4
+    (Fn
+      (Let ^n:19 Int)
+      (Let ^o:20 Order:1)
+      (Let ^xs:21 (Call <> List Int))
+      Void
+      (Block
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          Int
+          n:19
+          (Fn (Let ^x:22) (Block (Call / 10 x:22))))
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          Int
+          n:19
+          (Fn (Let ^x:23 Int) Int (Block x:23)))
+        (Call id:3 \typeArg Int \typeArg String n:19)
+        (Call id:3 \typeArg Int \typeArg String 1)
+        (Call new (Call <> Box:0 Int Int) n:19)
+        (Call (Call . o:20 \first) \typeArg Int \typeArg Int xs:21)
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          Int
+          \typeArg
+          (Call <> Never Void)
+          n:19
+          (Fn (Let ^x:24) (Block x:24)))
+        #void))))
+error 509..515: Cannot bubble from a function without Bubble in its return type
+error 567..585: Wrong number of type arguments.  Expected 1
+error 589..607: Wrong number of type arguments.  Expected 1
+error 611..631: Wrong number of type arguments.  Expected 1
+error 635..656: Wrong number of type arguments.  Expected 1
+
+=== generic types written with the wrong number of type arguments
+// Wherever a type is written, for core's types and the library's alike,
+// as each declares its type parameters; the type is unknown, so nothing
+// else is reported. Not the type `new` makes, which its call reports.
+class Box<T>(public item: T) {}
+class Plain {}
+interface Two<A, B> {}
+interface Shelf<T> {}
+class Sub extends Shelf<Int, Int> {}
+let Alias = Two<Int>;
+let a: Box<Int, Int>? = null;
+let b: List<Int, Int> = [];
+let c: Map<Int>? = null;
+let d: Promise<Int, String>? = null;
+let e: Int<String> = 1;
+let f: Plain<Int>? = null;
+let g: List<Two<Int>> = [];
+let h: Never<Int, Int>? = null;
+let i(x: AnyValue): Boolean { x is Box<Int, Int> }
+let j(x: AnyValue): Listed<Int, Int> throws Bubble { x as Listed<Int, Int> }
+let k<T extends Two<T>>(x: fn (Mapped<T>): T): Void {}
+let l: Map<String, List<Int>> = new Map([]);
+let m = new Box<Int, Int>(1);
+--- settled
+(Block
+  (Class ^Box:0 (TypeParam ^T:19) (Param ^item:21 T:19))
+  (Class ^Plain:1)
+  (Interface ^Two:2 (TypeParam ^A:23) (TypeParam ^B:24))
+  (Interface ^Shelf:3 (TypeParam ^T:26))
+  (Class ^Sub:4 (Call <> Shelf:3 Int Int))
+  (Let ^Alias:5 (Call <> Two:2 Int))
+  (Let ^a:6 (Call ? (Call <> Box:0 Int Int)) null)
+  (Let ^b:7 (Call <> List Int Int) (Call list))
+  (Let ^c:8 (Call ? (Call <> Map Int)) null)
+  (Let ^d:9 (Call ? (Call <> Promise Int String)) null)
+  (Let ^e:10 (Call <> Int String) 1)
+  (Let ^f:11 (Call ? (Call <> Plain:1 Int)) null)
+  (Let ^g:12 (Call <> List (Call <> Two:2 Int)) (Call list))
+  (Let ^h:13 (Call ? (Call <> Never Int Int)) null)
+  (Let
+    ^i:14
+    (Fn
+      (Let ^x:29 AnyValue)
+      Boolean
+      (Block (Call is x:29 (Call <> Box:0 Int Int)))))
+  (Let
+    ^j:15
+    (Fn
+      (Let ^x:30 AnyValue)
+      (Call throws (Call <> Listed Int Int) Bubble)
+      (Block (Call as x:30 (Call <> Listed Int Int)))))
+  (Let
+    ^k:16
+    (Fn
+      (TypeParam ^T:31 (Call <> Two:2 T:31))
+      (Let ^x:32 (Call FnType (Call <> Mapped T:31) T:31))
+      Void
+      (Block)))
+  (Let ^l:17 (Call <> Map String (Call <> List Int)) (Call new Map (Call list)))
+  (Let ^m:18 (Call new (Call <> Box:0 Int Int) 1))
+  #void)
+error 327..342: Wrong number of type arguments.  Expected 1
+error 358..366: Wrong number of type arguments.  Expected 2
+error 375..388: Wrong number of type arguments.  Expected 1
+error 405..419: Wrong number of type arguments.  Expected 1
+error 433..441: Wrong number of type arguments.  Expected 2
+error 458..478: Wrong number of type arguments.  Expected 1
+error 495..506: Wrong number of type arguments.  Expected 0
+error 519..529: Wrong number of type arguments.  Expected 0
+error 551..559: Wrong number of type arguments.  Expected 2
+error 574..589: Wrong number of type arguments.  Expected 1
+error 634..647: Wrong number of type arguments.  Expected 1
+error 670..686: Wrong number of type arguments.  Expected 1
+error 708..724: Wrong number of type arguments.  Expected 1
+error 743..749: Wrong number of type arguments.  Expected 2
+error 758..767: Wrong number of type arguments.  Expected 2
+error 835..855: Wrong number of type arguments.  Expected 1
+Failed: Wrong number of type arguments.  Expected 2
+
+=== a generic type written without its type arguments
+// Wherever a type is written and no value gives its arguments, for
+// core's types and the library's alike, through an alias too: a `let`
+// without a value, or whose value isn't one, a parameter (with a
+// default too), a field (with an initializer too), a return type, a
+// supertype, a bound, `is` and `as`, and inside another type, as `Box?`.
+// The type is unknown, so nothing else is reported.
+class Box<T>(public item: T) {
+  public static make(): Box<Int> { new Box<Int>(1) }
+}
+interface Sup<T> {}
+class Sub extends Sup {}
+class Holder(public box: Box) {
+  public xs: List = [1];
+}
+let Alias = Box;
+let a(): Void { var a: Box; a = new Box(1); }
+let b: List = "b";
+let c: Map<String, List>? = null;
+let d(x: AnyValue): Boolean { x is Box }
+let e(x: AnyValue): Box? throws Bubble { x as Box? }
+let f(x: fn (Listed): Int): Void {}
+let g<T extends Sup>(x: T): Void {}
+let h: Alias = 1;
+let i(xs: List = [1]): Int { xs.length }
+let j(): Box { new Box(1) }
+let k: Box? = new Box(1);
+--- settled
+(Block
+  (Class
+    ^Box:0
+    (TypeParam ^T:16)
+    (Param ^item:18 T:16)
+    (Method static
+      ^make:19
+      (Fn (Call <> Box:0 Int) (Block (Call new (Call <> Box:0 Int) 1)))))
+  (Interface ^Sup:1 (TypeParam ^T:20))
+  (Class ^Sub:2 Sup:1)
+  (Class ^Holder:3 (Param ^box:24 Box:0) (Let ^xs:25 List (Call list 1)))
+  (Let ^Alias:4 Box:0)
+  (Let
+    ^a:5
+    (Fn Void (Block (Var ^a:26 Box:0) (Assign a:26 (Call new Box:0 1)) #void)))
+  (Let ^b:6 List "b")
+  (Let ^c:7 (Call ? (Call <> Map String List)) null)
+  (Let ^d:8 (Fn (Let ^x:27 AnyValue) Boolean (Block (Call is x:27 Box:0))))
+  (Let
+    ^e:9
+    (Fn
+      (Let ^x:28 AnyValue)
+      (Call throws (Call ? Box:0) Bubble)
+      (Block (Call as x:28 (Call ? Box:0)))))
+  (Let ^f:10 (Fn (Let ^x:29 (Call FnType Listed Int)) Void (Block)))
+  (Let ^g:11 (Fn (TypeParam ^T:30 Sup:1) (Let ^x:31 T:30) Void (Block)))
+  (Let ^h:12 Alias:4 1)
+  (Let
+    ^i:13
+    (Fn (Let ^xs:32 List (Call list 1)) Int (Block (Call . xs:32 \length))))
+  (Let ^j:14 (Fn Box:0 (Block (Call new Box:0 1))))
+  (Let ^k:15 (Call ? Box:0) (Call new Box:0 1))
+  #void)
+error 525..528: Wrong number of type arguments.  Expected 1
+error 557..560: Wrong number of type arguments.  Expected 1
+error 577..581: Wrong number of type arguments.  Expected 1
+error 631..634: Wrong number of type arguments.  Expected 1
+error 661..665: Wrong number of type arguments.  Expected 1
+error 692..696: Wrong number of type arguments.  Expected 1
+error 742..745: Wrong number of type arguments.  Expected 1
+error 794..797: Wrong number of type arguments.  Expected 1
+error 768..771: Wrong number of type arguments.  Expected 1
+error 814..820: Wrong number of type arguments.  Expected 1
+error 853..856: Wrong number of type arguments.  Expected 1
+error 880..885: Wrong number of type arguments.  Expected 1
+error 901..905: Wrong number of type arguments.  Expected 1
+error 941..944: Wrong number of type arguments.  Expected 1
+error 967..970: Wrong number of type arguments.  Expected 1
+
+=== bare generic names where no type is written
+// Making a value, calling a static member, an object literal's class,
+// and an alias's own declaration name no type, so they're fine, as are
+// types that aren't generic.
+class Box<T>(public item: T) {
+  public static make(): Box<Int> { new Box<Int>(1) }
+}
+class Plain {}
+let Alias = Box;
+let a = new Box(1);
+let b = Box.make();
+let c = { class: Box, item: "c" };
+let d: Box<Box<Int>> = new Box(new Box(1));
+let e: Plain = new Plain();
+let f(x: AnyValue): Boolean { x is Plain }
+let g = new Alias(2);
+console.log("${a.item} ${b.item} ${c.item} ${d.item.item} ${g.item}");
+--- settled
+(Block
+  (Class
+    ^Box:0
+    (TypeParam ^T:10)
+    (Param ^item:12 T:10)
+    (Method static
+      ^make:13
+      (Fn (Call <> Box:0 Int) (Block (Call new (Call <> Box:0 Int) 1)))))
+  (Class ^Plain:1)
+  (Let ^Alias:2 Box:0)
+  (Let ^a:3 (Call new Box:0 1))
+  (Let ^b:4 (Call (Call . Box:0 \make)))
+  (Let ^c:5 (Call new Box:0 "c"))
+  (Let
+    ^d:6
+    (Call <> Box:0 (Call <> Box:0 Int))
+    (Call new Box:0 (Call new Box:0 1)))
+  (Let ^e:7 Plain:1 (Call new Plain:1))
+  (Let ^f:8 (Fn (Let ^x:15 AnyValue) Boolean (Block (Call is x:15 Plain:1))))
+  (Let ^g:9 (Call new Alias:2 2))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . a:3 \item)
+      " "
+      (Call . b:4 \item)
+      " "
+      (Call . c:5 \item)
+      " "
+      (Call . (Call . d:6 \item) \item)
+      " "
+      (Call . g:9 \item)))
+  #void)
+log 1 1 c 1 2
+
+=== a generic type written without its type arguments inferred from a value
+// A `let`'s value gives them, as Kotlin Temper infers them: `Box<Int32>`
+// for `new Box(1)`, through an alias too, and `Listed<Int32>` for a
+// `List<Int32>`, its supertype's arguments; so `s` is checked against
+// an `Int32`.
+class Box<T>(public item: T) {}
+let Alias = Box;
+let a: Box = new Box(1);
+let b: List = [2];
+let c: Listed = [3, 4];
+let d: Alias = new Box("d");
+let e: List = do { [true] };
+let f(): Int {
+  let g: Box = new Box(5);
+  g.item
+}
+console.log("${a.item + 1} ${b[0] + 1} ${c.length} ${d.item} ${e[0]} ${f()}");
+let s: String = a.item;
+--- settled
+(Block
+  (Class ^Box:0 (TypeParam ^T:9) (Param ^item:11 T:9))
+  (Let ^Alias:1 Box:0)
+  (Let ^a:2 Box:0 (Call new Box:0 1))
+  (Let ^b:3 List (Call list 2))
+  (Let ^c:4 Listed (Call list 3 4))
+  (Let ^d:5 Alias:1 (Call new Box:0 "d"))
+  (Let ^e:6 List (Block (Call list true)))
+  (Let
+    ^f:7
+    (Fn Int (Block (Let ^g:12 Box:0 (Call new Box:0 5)) (Call . g:12 \item))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call + (Call . a:2 \item) 1)
+      " "
+      (Call + (Call [] b:3 0) 1)
+      " "
+      (Call . c:4 \length)
+      " "
+      (Call . d:5 \item)
+      " "
+      (Call [] e:6 0)
+      " "
+      (Call f:7)))
+  (Let ^s:8 String (Call . a:2 \item))
+  #void)
+error 552..558: Cannot assign to String from Int32
+log 2 3 2 d true 5
+
+=== leading type arguments with the rest inferred
+// As Kotlin Temper allows them: the rest from a call's arguments and the
+// type wanted, for functions, methods and constructors, core's and the
+// library's, and for a `let` from its value, as without type arguments,
+// the leading ones as written; so `s` is checked against a `String`. The
+// leading ones are the type the value is wanted as, which binds what its
+// arguments leave (`pq`), but not one they bind (`pn`), as with all of
+// them written.
+class P<A, B>(public a: A, public b: B) {}
+class Order {
+  public both<A, B>(a: A, b: B): P<A, B> { new P(a, b) }
+}
+let pair<A, B>(a: A, b: B): P<A, B> { new P(a, b) }
+let make<A, B>(a: A): P<A, B?> { new P<A, B?>(a, null) }
+let apply<T, R, E>(x: T, f: fn (T): R): R { f(x) }
+let a = pair<Int>(1, "a");
+let b = new P<Int>(2, "b");
+let c = new Order().both<Int>(3, "c");
+let d: P<Int> = new P(4, "d");
+let e: Map<String> = new Map([new Pair("e", 5)]);
+let f: P<Int, String?> = make<Int>(6);
+let g = new Map<String>([new Pair("g", 7), new Pair("h", 8)]);
+let h = apply<Int, Int>(9) { x => x + 1 };
+let i(): Int {
+  let j: P<Int> = pair(10, "j");
+  j.a
+}
+let pn: P<Int?> = new P(1, "n");
+let pq: P<Int?> = new P(null, "q");
+console.log("${a.b} ${b.b} ${c.b} ${d.b} ${e.length} ${f.a} ${g.length} ${h} ${i()} ${pn.b} ${pq.b}");
+let s: Int = a.b;
+--- settled
+(Block
+  (Class
+    ^P:0
+    (TypeParam ^A:17)
+    (TypeParam ^B:18)
+    (Param ^a:20 A:17)
+    (Param ^b:21 B:18))
+  (Class
+    ^Order:1
+    (Method
+      ^both:23
+      (Fn
+        (TypeParam ^A:24)
+        (TypeParam ^B:25)
+        (Let ^a:26 A:24)
+        (Let ^b:27 B:25)
+        (Call <> P:0 A:24 B:25)
+        (Block (Call new P:0 a:26 b:27)))))
+  (Let
+    ^pair:2
+    (Fn
+      (TypeParam ^A:28)
+      (TypeParam ^B:29)
+      (Let ^a:30 A:28)
+      (Let ^b:31 B:29)
+      (Call <> P:0 A:28 B:29)
+      (Block (Call new P:0 a:30 b:31))))
+  (Let
+    ^make:3
+    (Fn
+      (TypeParam ^A:32)
+      (TypeParam ^B:33)
+      (Let ^a:34 A:32)
+      (Call <> P:0 A:32 (Call ? B:33))
+      (Block (Call new (Call <> P:0 A:32 (Call ? B:33)) a:34 null))))
+  (Let
+    ^apply:4
+    (Fn
+      (TypeParam ^T:35)
+      (TypeParam ^R:36)
+      (TypeParam ^E:37)
+      (Let ^x:38 T:35)
+      (Let ^f:39 (Call FnType T:35 R:36))
+      R:36
+      (Block (Call f:39 x:38))))
+  (Let ^a:5 (Call pair:2 \typeArg Int 1 "a"))
+  (Let ^b:6 (Call new (Call <> P:0 Int) 2 "b"))
+  (Let ^c:7 (Call (Call . (Call new Order:1) \both) \typeArg Int 3 "c"))
+  (Let ^d:8 (Call <> P:0 Int) (Call new P:0 4 "d"))
+  (Let
+    ^e:9
+    (Call <> Map String)
+    (Call new Map (Call list (Call new Pair "e" 5))))
+  (Let ^f:10 (Call <> P:0 Int (Call ? String)) (Call make:3 \typeArg Int 6))
+  (Let
+    ^g:11
+    (Call
+      new
+      (Call <> Map String)
+      (Call list (Call new Pair "g" 7) (Call new Pair "h" 8))))
+  (Let
+    ^h:12
+    (Call
+      apply:4
+      \typeArg
+      Int
+      \typeArg
+      Int
+      9
+      (Fn (Let ^x:40) (Block (Call + x:40 1)))))
+  (Let
+    ^i:13
+    (Fn
+      Int
+      (Block
+        (Let ^j:41 (Call <> P:0 Int) (Call pair:2 10 "j"))
+        (Call . j:41 \a))))
+  (Let ^pn:14 (Call <> P:0 (Call ? Int)) (Call new P:0 1 "n"))
+  (Let ^pq:15 (Call <> P:0 (Call ? Int)) (Call new P:0 null "q"))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . a:5 \b)
+      " "
+      (Call . b:6 \b)
+      " "
+      (Call . c:7 \b)
+      " "
+      (Call . d:8 \b)
+      " "
+      (Call . e:9 \length)
+      " "
+      (Call . f:10 \a)
+      " "
+      (Call . g:11 \length)
+      " "
+      h:12
+      " "
+      (Call i:13)
+      " "
+      (Call . pn:14 \b)
+      " "
+      (Call . pq:15 \b)))
+  (Let ^s:16 Int (Call . a:5 \b))
+  #void)
+error 1126..1139: Cannot assign to P<Int32?, String> from P<Int32, String>
+error 1293..1296: Cannot assign to Int32 from String
+log a b c d 1 6 2 10 10 n q
+
+=== explicit type arguments type a function literal argument
+// A trailing block or function literal after explicit type arguments,
+// all or leading ones, takes its parameters' types and its wanted result
+// from them, for functions and methods, and a constructor's literal, as
+// without them: so each `let s: String` is checked against an `Int32`
+// and each `"r"` and `3` against the result wanted. (`new C(…) { … }` calls
+// what `new` makes, so constructors take no trailing block.)
+class Applied<A>(public a: A, public f: fn (A): Int) {}
+class Holder<T>(public v: T) {
+  public map<U>(f: fn (T): U): U { f(v) }
+}
+let each<T>(x: T, f: fn (T): Int): Int { f(x) }
+let pairUp<A, B>(a: A, b: B, f: fn (A, B): Int): Int { f(a, b) }
+each<Int>(1) { y => let s: String = y; 0 };
+each<Int>(1, fn (y) { let s: String = y; 0 });
+each<Int>(1) { y => "r" };
+pairUp<Int>(1, [2]) { a, b => let s: String = a; b.length };
+new Holder(2).map<String> { x => let s: String = x; "m" };
+new Holder(2).map<String> { x => 3 };
+new Applied<Int>(3, fn (x) { let s: String = x; 0 });
+new Applied(3, fn (x) { let s: String = x; 0 });
+new Applied<Int>(3, fn (x) { "r" });
+--- settled
+(Block
+  (Class
+    ^Applied:0
+    (TypeParam ^A:4)
+    (Param ^a:6 A:4)
+    (Param ^f:7 (Call FnType A:4 Int)))
+  (Class
+    ^Holder:1
+    (TypeParam ^T:8)
+    (Param ^v:10 T:8)
+    (Method
+      ^map:11
+      (Fn
+        (TypeParam ^U:12)
+        (Let ^f:13 (Call FnType T:8 U:12))
+        U:12
+        (Block (Call f:13 v:10)))))
+  (Let
+    ^each:2
+    (Fn
+      (TypeParam ^T:14)
+      (Let ^x:15 T:14)
+      (Let ^f:16 (Call FnType T:14 Int))
+      Int
+      (Block (Call f:16 x:15))))
+  (Let
+    ^pairUp:3
+    (Fn
+      (TypeParam ^A:17)
+      (TypeParam ^B:18)
+      (Let ^a:19 A:17)
+      (Let ^b:20 B:18)
+      (Let ^f:21 (Call FnType A:17 B:18 Int))
+      Int
+      (Block (Call f:21 a:19 b:20))))
+  (Call
+    each:2
+    \typeArg
+    Int
+    1
+    (Fn (Let ^y:22) (Block (Let ^s:23 String y:22) 0)))
+  (Call
+    each:2
+    \typeArg
+    Int
+    1
+    (Fn (Let ^y:24) (Block (Let ^s:25 String y:24) 0)))
+  (Call each:2 \typeArg Int 1 (Fn (Let ^y:26) (Block "r")))
+  (Call
+    pairUp:3
+    \typeArg
+    Int
+    1
+    (Call list 2)
+    (Fn
+      (Let ^a:27)
+      (Let ^b:28)
+      (Block (Let ^s:29 String a:27) (Call . b:28 \length))))
+  (Call
+    (Call . (Call new Holder:1 2) \map)
+    \typeArg
+    String
+    (Fn (Let ^x:30) (Block (Let ^s:31 String x:30) "m")))
+  (Call
+    (Call . (Call new Holder:1 2) \map)
+    \typeArg
+    String
+    (Fn (Let ^x:32) (Block 3)))
+  (Call
+    new
+    (Call <> Applied:0 Int)
+    3
+    (Fn (Let ^x:33) (Block (Let ^s:34 String x:33) 0)))
+  (Call new Applied:0 3 (Fn (Let ^x:35) (Block (Let ^s:36 String x:35) 0)))
+  (Call new (Call <> Applied:0 Int) 3 (Fn (Let ^x:37) (Block "r")))
+  #void)
+error 712..713: Cannot assign to String from Int32
+error 758..759: Cannot assign to String from Int32
+error 787..790: Expected subtype of Int32, but got String
+error 840..841: Cannot assign to String from Int32
+error 904..905: Cannot assign to String from Int32
+error 947..948: Expected subtype of String, but got Int32
+error 997..998: Cannot assign to String from Int32
+error 1046..1047: Cannot assign to String from Int32
+error 1084..1087: Expected subtype of Int32, but got String
+
+=== leading type arguments where nothing gives the rest
+// Too few type arguments are an error wherever no value gives the rest:
+// a `let` without a value, a parameter, a return type, a field, a
+// supertype, a bound, `is`, and inside another type, as `P<Int>?`. Too
+// many are an error everywhere. A leading type argument that doesn't fit
+// a value is reported as such, and one the call can't solve takes its
+// bound, as it does with no type args.
+class P<A, B>(public a: A, public b: B) {}
+interface Two<A, B> {}
+class Q(public p: P<Int>) {}
+class R extends Two<Int> {}
+let pair<A, B>(a: A, b: B): P<A, B> { new P(a, b) }
+let make<A, B>(a: A): P<A, B?> { new P<A, B?>(a, null) }
+let a(): Void { var a: P<Int>; a = new P(1, "a"); }
+let b(x: P<Int>): Void {}
+let c(): P<Int> { new P(1, "c") }
+let d<T extends Two<Int>>(x: T): Void {}
+let e(x: AnyValue): Boolean { x is P<Int> }
+let f: P<Int>? = new P(1, "f");
+let g: List<P<Int>> = [new P(1, "g")];
+let h: P<Int, String, Int> = new P(1, "h");
+let i = pair<Int, String, Int>(1, "i");
+let j = new P<Int, String, Int>(1, "j");
+let k: P<Int> = new P("k", "k");
+let l(x: String): Void { pair<Int>(x, 1); }
+let m = make<Int>(1);
+let n: P<Int, Int> = m;
+let o = make(1);
+let p: P<Int, Int> = o;
+--- settled
+(Block
+  (Class
+    ^P:0
+    (TypeParam ^A:22)
+    (TypeParam ^B:23)
+    (Param ^a:25 A:22)
+    (Param ^b:26 B:23))
+  (Interface ^Two:1 (TypeParam ^A:27) (TypeParam ^B:28))
+  (Class ^Q:2 (Param ^p:31 (Call <> P:0 Int)))
+  (Class ^R:3 (Call <> Two:1 Int))
+  (Let
+    ^pair:4
+    (Fn
+      (TypeParam ^A:33)
+      (TypeParam ^B:34)
+      (Let ^a:35 A:33)
+      (Let ^b:36 B:34)
+      (Call <> P:0 A:33 B:34)
+      (Block (Call new P:0 a:35 b:36))))
+  (Let
+    ^make:5
+    (Fn
+      (TypeParam ^A:37)
+      (TypeParam ^B:38)
+      (Let ^a:39 A:37)
+      (Call <> P:0 A:37 (Call ? B:38))
+      (Block (Call new (Call <> P:0 A:37 (Call ? B:38)) a:39 null))))
+  (Let
+    ^a:6
+    (Fn
+      Void
+      (Block
+        (Var ^a:40 (Call <> P:0 Int))
+        (Assign a:40 (Call new P:0 1 "a"))
+        #void)))
+  (Let ^b:7 (Fn (Let ^x:41 (Call <> P:0 Int)) Void (Block)))
+  (Let ^c:8 (Fn (Call <> P:0 Int) (Block (Call new P:0 1 "c"))))
+  (Let
+    ^d:9
+    (Fn (TypeParam ^T:42 (Call <> Two:1 Int)) (Let ^x:43 T:42) Void (Block)))
+  (Let
+    ^e:10
+    (Fn (Let ^x:44 AnyValue) Boolean (Block (Call is x:44 (Call <> P:0 Int)))))
+  (Let ^f:11 (Call ? (Call <> P:0 Int)) (Call new P:0 1 "f"))
+  (Let ^g:12 (Call <> List (Call <> P:0 Int)) (Call list (Call new P:0 1 "g")))
+  (Let ^h:13 (Call <> P:0 Int String Int) (Call new P:0 1 "h"))
+  (Let ^i:14 (Call pair:4 \typeArg Int \typeArg String \typeArg Int 1 "i"))
+  (Let ^j:15 (Call new (Call <> P:0 Int String Int) 1 "j"))
+  (Let ^k:16 (Call <> P:0 Int) (Call new P:0 "k" "k"))
+  (Let
+    ^l:17
+    (Fn (Let ^x:45 String) Void (Block (Call pair:4 \typeArg Int x:45 1) #void)))
+  (Let ^m:18 (Call make:5 \typeArg Int 1))
+  (Let ^n:19 (Call <> P:0 Int Int) m:18)
+  (Let ^o:20 (Call make:5 1))
+  (Let ^p:21 (Call <> P:0 Int Int) o:20)
+  #void)
+error 481..487: Wrong number of type arguments.  Expected 2
+error 508..516: Wrong number of type arguments.  Expected 2
+error 652..658: Wrong number of type arguments.  Expected 2
+error 690..696: Wrong number of type arguments.  Expected 2
+error 716..722: Wrong number of type arguments.  Expected 2
+error 757..765: Wrong number of type arguments.  Expected 2
+error 817..823: Wrong number of type arguments.  Expected 2
+error 833..839: Wrong number of type arguments.  Expected 2
+error 870..876: Wrong number of type arguments.  Expected 2
+error 904..923: Wrong number of type arguments.  Expected 2
+error 949..979: Wrong number of type arguments.  Expected 2
+error 989..1020: Wrong number of type arguments.  Expected 2
+error 1044..1047: Actual arguments do not match signature: <A extends AnyValue, B extends AnyValue>(A, B) -> P<A, B> expected [Int32, String], but got [String, String]
+error 1090..1091: Actual arguments do not match signature: <A extends AnyValue, B extends AnyValue>(A, B) -> P<A, B> expected [Int32, Int32], but got [String, Int32]
+error 1142..1143: Cannot assign to P<Int32, Int32> from P<Int32, AnyValue?>
+error 1183..1184: Cannot assign to P<Int32, Int32> from P<Int32, AnyValue?>
+Failed: Wrong number of type arguments.  Expected 2
+
+=== a type parameter nothing solves takes its bound
+// As Kotlin Temper's solver binds it: its declared bound, `AnyValue` if
+// none, with the type parameters before it put in, with or without
+// leading type arguments. So `make<Int>(1)` and `make(1)` are a
+// `P<Int32, AnyValue?>`, `makeB(1)` a `P<Int32, Animal?>`, `none()` a
+// `List<AnyValue>`, `below(1)` a `List<Int32>`, and `fails`'s `E`
+// `AnyValue`; uses are then checked against that, as `n1` to `n5` are.
+// A type wanted that binds it binds it instead (`n6`, `n7`), and so do
+// type arguments where Kotlin would fold the call (`mf`).
+class P<A, B>(public a: A, public b: B) {}
+interface Animal {}
+let make<A, B>(a: A): P<A, B?> { new P<A, B?>(a, null) }
+let makeB<A, B extends Animal>(a: A): P<A, B?> { new P<A, B?>(a, null) }
+let none<T>(): List<T> { [] }
+let below<T, U extends T>(x: T): List<U> { [] }
+let fails<T, E>(x: T): T throws E { x }
+let m = make<Int>(1);
+let o = make(1);
+let q = makeB(1);
+let u = none();
+let w = below(1);
+let r = fails(1) orelse 0;
+let n1: P<Int, Int> = m;
+let n2: P<Int, Int> = o;
+let n3: P<Int, Int> = q;
+let n4: Int = u;
+let n5: Int = w;
+let n6: P<Int, Int?> = make(1);
+let n7: P<Int, Int> = make<Int>(1);
+let mf = make<Int, String>(1);
+let n8: P<Int, Int> = mf;
+console.log("${m.a} ${o.a} ${m.b == null} ${q.b == null} ${u.length} ${w.length} ${r}");
+--- settled
+(Block
+  (Class
+    ^P:0
+    (TypeParam ^A:22)
+    (TypeParam ^B:23)
+    (Param ^a:25 A:22)
+    (Param ^b:26 B:23))
+  (Interface ^Animal:1)
+  (Let
+    ^make:2
+    (Fn
+      (TypeParam ^A:28)
+      (TypeParam ^B:29)
+      (Let ^a:30 A:28)
+      (Call <> P:0 A:28 (Call ? B:29))
+      (Block (Call new (Call <> P:0 A:28 (Call ? B:29)) a:30 null))))
+  (Let
+    ^makeB:3
+    (Fn
+      (TypeParam ^A:31)
+      (TypeParam ^B:32 Animal:1)
+      (Let ^a:33 A:31)
+      (Call <> P:0 A:31 (Call ? B:32))
+      (Block (Call new (Call <> P:0 A:31 (Call ? B:32)) a:33 null))))
+  (Let ^none:4 (Fn (TypeParam ^T:34) (Call <> List T:34) (Block (Call list))))
+  (Let
+    ^below:5
+    (Fn
+      (TypeParam ^T:35)
+      (TypeParam ^U:36 T:35)
+      (Let ^x:37 T:35)
+      (Call <> List U:36)
+      (Block (Call list))))
+  (Let
+    ^fails:6
+    (Fn
+      (TypeParam ^T:38)
+      (TypeParam ^E:39)
+      (Let ^x:40 T:38)
+      (Call throws T:38 E:39)
+      (Block x:40)))
+  (Let ^m:7 (Call make:2 \typeArg Int 1))
+  (Let ^o:8 (Call make:2 1))
+  (Let ^q:9 (Call makeB:3 1))
+  (Let ^u:10 (Call none:4))
+  (Let ^w:11 (Call below:5 1))
+  (Let ^r:12 (Orelse (Call fails:6 1) 0))
+  (Let ^n1:13 (Call <> P:0 Int Int) m:7)
+  (Let ^n2:14 (Call <> P:0 Int Int) o:8)
+  (Let ^n3:15 (Call <> P:0 Int Int) q:9)
+  (Let ^n4:16 Int u:10)
+  (Let ^n5:17 Int w:11)
+  (Let ^n6:18 (Call <> P:0 Int (Call ? Int)) (Call make:2 1))
+  (Let ^n7:19 (Call <> P:0 Int Int) (Call make:2 \typeArg Int 1))
+  (Let ^mf:20 (Call make:2 \typeArg Int \typeArg String 1))
+  (Let ^n8:21 (Call <> P:0 Int Int) mf:20)
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . m:7 \a)
+      " "
+      (Call . o:8 \a)
+      " "
+      (Call == (Call . m:7 \b) null)
+      " "
+      (Call == (Call . q:9 \b) null)
+      " "
+      (Call . u:10 \length)
+      " "
+      (Call . w:11 \length)
+      " "
+      r:12))
+  #void)
+error 998..999: Cannot assign to P<Int32, Int32> from P<Int32, AnyValue?>
+error 1023..1024: Cannot assign to P<Int32, Int32> from P<Int32, AnyValue?>
+error 1048..1049: Cannot assign to P<Int32, Int32> from P<Int32, Animal?>
+error 1065..1066: Cannot assign to Int32 from List<AnyValue>
+error 1082..1083: Cannot assign to Int32 from List<Int32>
+error 1139..1151: Cannot assign to P<Int32, Int32> from P<Int32, Int32?>
+error 1206..1208: Cannot assign to P<Int32, Int32> from P<Int32, String?>
+log 1 1 true true 0 0 1
+
+=== a generic class's constructor arguments checked against its type arguments
+// From the type arguments written, or the type wanted, for a call and
+// for an object literal; for a class with a constructor, or with
+// properties declared in its body.
+class Two<T>(public a: Int, public b: T) {}
+class Three<T> {
+  public a: Int;
+  public b: T;
+  public constructor(a: Int, b: T) { this.a = a; this.b = b; }
+}
+let take(t: Two<Int>?): Void {}
+let f(): Int {
+  let r1: Two<Int> = new Two(1, "s");
+  let r2 = new Two<Int>(1, "s");
+  let r3: Two<Int> = { a: 1, b: "s" };
+  let r4: Three<Int> = new Three(1, "s");
+  take(new Two(1, "s"));
+  take({ a: 1, b: "s" });
+  let ok: Two<Int> = new Two(1, 2);
+  r1.b + r2.b + r3.b + r4.b + ok.b
+}
+--- settled
+(Block
+  (Class ^Two:0 (TypeParam ^T:4) (Param ^a:6 Int) (Param ^b:7 T:4))
+  (Class
+    ^Three:1
+    (TypeParam ^T:8)
+    (Let ^a:10 Int)
+    (Let ^b:11 T:8)
+    (Constructor
+      ^constructor:12
+      (Fn
+        (Let ^a:13 Int)
+        (Let ^b:14 T:8)
+        (Block
+          (Assign (Call . this#9 \a) a:13)
+          (Assign (Call . this#9 \b) b:14)
+          #void))))
+  (Let ^take:2 (Fn (Let ^t:15 (Call ? (Call <> Two:0 Int))) Void (Block)))
+  (Let
+    ^f:3
+    (Fn
+      Int
+      (Block
+        (Let ^r1:16 (Call <> Two:0 Int) (Call new Two:0 1 "s"))
+        (Let ^r2:17 (Call new (Call <> Two:0 Int) 1 "s"))
+        (Let ^r3:18 (Call <> Two:0 Int) (Call new Two:0 1 "s"))
+        (Let ^r4:19 (Call <> Three:1 Int) (Call new Three:1 1 "s"))
+        (Call take:2 (Call new Two:0 1 "s"))
+        (Call take:2 (Call new Two:0 1 "s"))
+        (Let ^ok:20 (Call <> Two:0 Int) (Call new Two:0 1 2))
+        (Call
+          +
+          (Call
+            +
+            (Call
+              +
+              (Call + (Call . r1:16 \b) (Call . r2:17 \b))
+              (Call . r3:18 \b))
+            (Call . r4:19 \b))
+          (Call . ok:20 \b))))))
+error 410..413: Actual arguments do not match signature: <T extends AnyValue>(Int32, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 443..446: Actual arguments do not match signature: <T extends AnyValue>(Int32, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 481..484: Actual arguments do not match signature: <T extends AnyValue>(Int32, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 524..527: Actual arguments do not match signature: <T extends AnyValue>(Int32, T) -> Three<T> expected [Int32, Int32], but got [Int32, String]
+error 537..552: Expected subtype of Two<Int32>?, but got Two<String>
+error 562..578: Expected subtype of Two<Int32>?, but got Two<String>
+
+=== a type parameter bound two ways is the arguments' common supertype
+// As Kotlin Temper's solver binds it: `Animal` for a `Dog` and a `Cat`,
+// `AnyValue` for a `Two<Int32>` and a `Two<String>`, and `Int32?` for an
+// `Int32` and `null`, for constructors, functions, methods, and object
+// literals (`Boolean` places show what it is). But not above a type core
+// marks `@mayDowncastTo(false)`, as `Int32`, `String`, or `List`, whose
+// values may not be told apart once joined: `Int32` and `String`, `List<Int32>`
+// and `List<String>`, or a `List<Int32>` and a `Listed<Int32>` are an
+// error at the call, which Kotlin accepts. Type arguments, or a type
+// wanted that binds the type parameter, bind it instead, even where
+// Kotlin would fold the call (`rp`, `rq`). A user's type's
+// own `@mayDowncastTo(false)` isn't read yet, as for `is`.
+interface Animal {}
+class Dog extends Animal {}
+class Cat extends Animal {}
+@mayDowncastTo(false) class Opaque {}
+class Two<T>(public first: T, public second: T) {}
+class Box<T>(public item: T) {
+  public both<U>(a: U, b: U): List<U> { [a, b] }
+}
+let pick<T>(a: T, b: T): T { a }
+let wrap<T>(a: T, b: T): List<T> { [a, b] }
+let pet<T extends Animal>(a: T, b: T): T { a }
+let k<T>(xs: List<T>, x: T): T { x }
+let r = new Two(1, "s");
+let consts(): Void {
+  let rw: Two<Int> = new Two(1, "s");
+  let rl: Two<Int> = { first: 1, second: "s" };
+  let rp: AnyValue = pick<AnyValue>(1, "s");
+  let rq = pick<Int>(1, "s");
+}
+let f(i: Int, s: String, o: Int?, x: Float64, b: Box<Int>, xs: List<Int>, ld: Listed<Int>): Void {
+  let a1: Boolean = new Two(i, s);
+  let a2: Boolean = pick(i, s);
+  let a3: Boolean = wrap(i, s);
+  let a4: Boolean = b.both(i, s);
+  let a5: Boolean = { class: Two, first: i, second: s };
+  let a6: Boolean = new Two(new Dog(), new Cat());
+  let a7: Boolean = new Two(i, x);
+  let a8: Boolean = new Two(new Two(i, i), new Two(s, s));
+  let a9: Boolean = new Two([i], [s]);
+  let a10: Boolean = pick(xs, ld);
+  let a11: Boolean = new Two(new Opaque(), new Dog());
+  let n1: Boolean = new Two(i, null);
+  let n2: Boolean = new Two(null, i);
+  let n3: Boolean = new Two(o, s);
+  let n4: Boolean = pick(i, null);
+  let w1: Two<Int> = new Two(i, s);
+  let w2: Two<Int> = { first: i, second: s };
+  let w3: List<Int> = wrap(i, s);
+  let w4: List<Int> = b.both(s, i);
+  let w5: Two<Float64> = new Two(i, x);
+  let w6: Two<Two<Int>> = new Two(new Two(i, i), new Two(s, s));
+  let ok1: Two<Int?> = new Two(i, null);
+  let ok2: Two<Animal> = new Two(new Dog(), new Cat());
+  let ok3: Two<AnyValue> = new Two(i, s);
+  let ok4: AnyValue = pick(i, s);
+  let ok5: Listed<Int> = pick(xs, ld);
+  let e1: Boolean = new Two<AnyValue>(i, s);
+  let e2: Boolean = pick<AnyValue>(i, s);
+  pet(new Dog(), i);
+  k(xs, s);
+}
+let rs: Two<AnyValue> = r;
+console.log("ran");
+--- settled
+(Block
+  (Interface ^Animal:0)
+  (Class ^Dog:1 Animal:0)
+  (Class ^Cat:2 Animal:0)
+  (Class ^Opaque:3)
+  (Class
+    ^Two:4
+    (TypeParam ^T:18)
+    (Param ^first:20 T:18)
+    (Param ^second:21 T:18))
+  (Class
+    ^Box:5
+    (TypeParam ^T:22)
+    (Param ^item:24 T:22)
+    (Method
+      ^both:25
+      (Fn
+        (TypeParam ^U:26)
+        (Let ^a:27 U:26)
+        (Let ^b:28 U:26)
+        (Call <> List U:26)
+        (Block (Call list a:27 b:28)))))
+  (Let
+    ^pick:6
+    (Fn (TypeParam ^T:29) (Let ^a:30 T:29) (Let ^b:31 T:29) T:29 (Block a:30)))
+  (Let
+    ^wrap:7
+    (Fn
+      (TypeParam ^T:32)
+      (Let ^a:33 T:32)
+      (Let ^b:34 T:32)
+      (Call <> List T:32)
+      (Block (Call list a:33 b:34))))
+  (Let
+    ^pet:8
+    (Fn
+      (TypeParam ^T:35 Animal:0)
+      (Let ^a:36 T:35)
+      (Let ^b:37 T:35)
+      T:35
+      (Block a:36)))
+  (Let
+    ^k:9
+    (Fn
+      (TypeParam ^T:38)
+      (Let ^xs:39 (Call <> List T:38))
+      (Let ^x:40 T:38)
+      T:38
+      (Block x:40)))
+  (Let ^r:10 (Call new Two:4 1 "s"))
+  (Let
+    ^consts:11
+    (Fn
+      Void
+      (Block
+        (Let ^rw:41 (Call <> Two:4 Int) (Call new Two:4 1 "s"))
+        (Let ^rl:42 (Call <> Two:4 Int) (Call new Two:4 1 "s"))
+        (Let ^rp:43 AnyValue (Call pick:6 \typeArg AnyValue 1 "s"))
+        (Let ^rq:44 (Call pick:6 \typeArg Int 1 "s"))
+        #void)))
+  (Let
+    ^f:12
+    (Fn
+      (Let ^i:45 Int)
+      (Let ^s:46 String)
+      (Let ^o:47 (Call ? Int))
+      (Let ^x:48 Float64)
+      (Let ^b:49 (Call <> Box:5 Int))
+      (Let ^xs:50 (Call <> List Int))
+      (Let ^ld:51 (Call <> Listed Int))
+      Void
+      (Block
+        (Let ^a1:52 Boolean (Call new Two:4 i:45 s:46))
+        (Let ^a2:53 Boolean (Call pick:6 i:45 s:46))
+        (Let ^a3:54 Boolean (Call wrap:7 i:45 s:46))
+        (Let ^a4:55 Boolean (Call (Call . b:49 \both) i:45 s:46))
+        (Let ^a5:56 Boolean (Call new Two:4 i:45 s:46))
+        (Let ^a6:57 Boolean (Call new Two:4 (Call new Dog:1) (Call new Cat:2)))
+        (Let ^a7:58 Boolean (Call new Two:4 i:45 x:48))
+        (Let
+          ^a8:59
+          Boolean
+          (Call new Two:4 (Call new Two:4 i:45 i:45) (Call new Two:4 s:46 s:46)))
+        (Let ^a9:60 Boolean (Call new Two:4 (Call list i:45) (Call list s:46)))
+        (Let ^a10:61 Boolean (Call pick:6 xs:50 ld:51))
+        (Let
+          ^a11:62
+          Boolean
+          (Call new Two:4 (Call new Opaque:3) (Call new Dog:1)))
+        (Let ^n1:63 Boolean (Call new Two:4 i:45 null))
+        (Let ^n2:64 Boolean (Call new Two:4 null i:45))
+        (Let ^n3:65 Boolean (Call new Two:4 o:47 s:46))
+        (Let ^n4:66 Boolean (Call pick:6 i:45 null))
+        (Let ^w1:67 (Call <> Two:4 Int) (Call new Two:4 i:45 s:46))
+        (Let ^w2:68 (Call <> Two:4 Int) (Call new Two:4 i:45 s:46))
+        (Let ^w3:69 (Call <> List Int) (Call wrap:7 i:45 s:46))
+        (Let ^w4:70 (Call <> List Int) (Call (Call . b:49 \both) s:46 i:45))
+        (Let ^w5:71 (Call <> Two:4 Float64) (Call new Two:4 i:45 x:48))
+        (Let
+          ^w6:72
+          (Call <> Two:4 (Call <> Two:4 Int))
+          (Call new Two:4 (Call new Two:4 i:45 i:45) (Call new Two:4 s:46 s:46)))
+        (Let ^ok1:73 (Call <> Two:4 (Call ? Int)) (Call new Two:4 i:45 null))
+        (Let
+          ^ok2:74
+          (Call <> Two:4 Animal:0)
+          (Call new Two:4 (Call new Dog:1) (Call new Cat:2)))
+        (Let ^ok3:75 (Call <> Two:4 AnyValue) (Call new Two:4 i:45 s:46))
+        (Let ^ok4:76 AnyValue (Call pick:6 i:45 s:46))
+        (Let ^ok5:77 (Call <> Listed Int) (Call pick:6 xs:50 ld:51))
+        (Let ^e1:78 Boolean (Call new (Call <> Two:4 AnyValue) i:45 s:46))
+        (Let ^e2:79 Boolean (Call pick:6 \typeArg AnyValue i:45 s:46))
+        (Call pet:8 (Call new Dog:1) i:45)
+        (Call k:9 xs:50 s:46)
+        #void)))
+  (Let ^rs:13 (Call <> Two:4 AnyValue) r:10)
+  (Call (Call . console \log) "ran")
+  #void)
+error 1193..1208: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 1263..1266: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 1310..1313: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 1513..1526: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 1513..1526: Cannot assign to Boolean from Two<AnyValue>
+error 1553..1557: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> T expected [Boolean, Boolean], but got [Int32, String]
+error 1580..1590: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 1580..1590: Cannot assign to Boolean from List<AnyValue>
+error 1612..1624: U is bound to both Int32 and String, which can't be told apart once joined; give U explicitly
+error 1612..1624: Cannot assign to Boolean from List<AnyValue>
+error 1646..1681: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 1646..1681: Cannot assign to Boolean from Two<AnyValue>
+error 1703..1732: Cannot assign to Boolean from Two<Animal>
+error 1754..1767: T is bound to both Int32 and Float64, which can't be told apart once joined; give T explicitly
+error 1754..1767: Cannot assign to Boolean from Two<AnyValue>
+error 1789..1826: Cannot assign to Boolean from Two<AnyValue>
+error 1848..1865: T is bound to both List<Int32> and List<String>, which can't be told apart once joined; give T explicitly
+error 1848..1865: Cannot assign to Boolean from Two<AnyValue>
+error 1893..1899: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> T expected [Boolean, Boolean], but got [List<Int32>, Listed<Int32>]
+error 1923..1955: Cannot assign to Boolean from Two<AnyValue>
+error 1977..1993: Cannot assign to Boolean from Two<Int32?>
+error 2015..2031: Cannot assign to Boolean from Two<Int32?>
+error 2053..2066: T is bound to both Int32? and String, which can't be told apart once joined; give T explicitly
+error 2053..2066: Cannot assign to Boolean from Two<AnyValue?>
+error 2088..2101: Cannot assign to Boolean from Int32?
+error 2135..2136: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 2180..2181: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 2215..2216: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> List<T> expected [Int32, Int32], but got [Int32, String]
+error 2248..2249: Actual arguments do not match signature: <U extends AnyValue>(Box<Int32>, U, U) -> List<U> expected [Box<Int32>, Int32, Int32], but got [Box<Int32>, String, Int32]
+error 2288..2289: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Float64, Float64], but got [Int32, Float64]
+error 2344..2357: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Two<Int32>, Two<Int32>], but got [Two<Int32>, Two<String>]
+error 2592..2615: Cannot assign to Boolean from Two<AnyValue>
+error 2637..2657: Cannot assign to Boolean from AnyValue
+error 2661..2678: T is bound to both Dog and Int32, which can't be told apart once joined; give T explicitly
+error 2688..2689: Actual arguments do not match signature: <T extends AnyValue>(List<T>, T) -> T expected [List<Int32>, Int32], but got [List<Int32>, String]
+Failed: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+
+=== a type parameter bound two ways inside another type isn't joined
+// Only where a parameter's whole type is `T` or `T?`: inside a function
+// type, a `List`, or another generic type, a second binding that differs
+// doesn't fit the first, as type parameters are invariant (fnj, lst, bx),
+// nor does a whole one after it (k). A list literal's element type is as
+// a whole `T`, as the literal takes the type it's wanted as, so `[new
+// Dog()]` and `[new Cat()]` are `List<Animal>`s; its elements that can't
+// be told apart once joined are an error at the call (ls, bl), unless
+// the type wanted binds the type parameter (bw).
+interface Animal {}
+class Dog extends Animal {}
+class Cat extends Animal {}
+class Box<T>(public item: T) {}
+let fnj<T>(a: fn (): T, b: fn (): T): T { a() }
+let lst<T>(a: List<T>, b: List<T>): T { a[0] }
+let bx<T>(a: Box<T>, b: Box<T>): T { a.item }
+let k<T>(xs: List<T>, x: T): T { x }
+let first<T>(xs: List<T>): T { xs[0] }
+let fd(): Dog { new Dog() }
+let fc(): Cat { new Cat() }
+let f(dogs: List<Dog>, cats: List<Cat>, s: String): Void {
+  fnj(fd, fc);
+  lst(dogs, cats);
+  bx(new Box(new Dog()), new Box(new Cat()));
+  k(dogs, new Cat());
+  let ok1: Animal = lst([new Dog()], [new Cat()]);
+  let ok2: Dog = fnj(fd, fd);
+  let ls = first([1, s]);
+  let bl = new Box(["a", 3]);
+  let bw: Box<List<AnyValue>> = new Box(["a", 3]);
+}
+--- settled
+(Block
+  (Interface ^Animal:0)
+  (Class ^Dog:1 Animal:0)
+  (Class ^Cat:2 Animal:0)
+  (Class ^Box:3 (TypeParam ^T:15) (Param ^item:17 T:15))
+  (Let
+    ^fnj:4
+    (Fn
+      (TypeParam ^T:18)
+      (Let ^a:19 (Call FnType T:18))
+      (Let ^b:20 (Call FnType T:18))
+      T:18
+      (Block (Call a:19))))
+  (Let
+    ^lst:5
+    (Fn
+      (TypeParam ^T:21)
+      (Let ^a:22 (Call <> List T:21))
+      (Let ^b:23 (Call <> List T:21))
+      T:21
+      (Block (Call [] a:22 0))))
+  (Let
+    ^bx:6
+    (Fn
+      (TypeParam ^T:24)
+      (Let ^a:25 (Call <> Box:3 T:24))
+      (Let ^b:26 (Call <> Box:3 T:24))
+      T:24
+      (Block (Call . a:25 \item))))
+  (Let
+    ^k:7
+    (Fn
+      (TypeParam ^T:27)
+      (Let ^xs:28 (Call <> List T:27))
+      (Let ^x:29 T:27)
+      T:27
+      (Block x:29)))
+  (Let
+    ^first:8
+    (Fn
+      (TypeParam ^T:30)
+      (Let ^xs:31 (Call <> List T:30))
+      T:30
+      (Block (Call [] xs:31 0))))
+  (Let ^fd:9 (Fn Dog:1 (Block (Call new Dog:1))))
+  (Let ^fc:10 (Fn Cat:2 (Block (Call new Cat:2))))
+  (Let
+    ^f:11
+    (Fn
+      (Let ^dogs:32 (Call <> List Dog:1))
+      (Let ^cats:33 (Call <> List Cat:2))
+      (Let ^s:34 String)
+      Void
+      (Block
+        (Call fnj:4 fd:9 fc:10)
+        (Call lst:5 dogs:32 cats:33)
+        (Call
+          bx:6
+          (Call new Box:3 (Call new Dog:1))
+          (Call new Box:3 (Call new Cat:2)))
+        (Call k:7 dogs:32 (Call new Cat:2))
+        (Let
+          ^ok1:35
+          Animal:0
+          (Call lst:5 (Call list (Call new Dog:1)) (Call list (Call new Cat:2))))
+        (Let ^ok2:36 Dog:1 (Call fnj:4 fd:9 fd:9))
+        (Let ^ls:37 (Call first:8 (Call list 1 s:34)))
+        (Let ^bl:38 (Call new Box:3 (Call list "a" 3)))
+        (Let
+          ^bw:39
+          (Call <> Box:3 (Call <> List AnyValue))
+          (Call new Box:3 (Call list "a" 3)))
+        #void))))
+error 1012..1014: Actual arguments do not match signature: <T extends AnyValue>(fn: T, fn: T) -> T expected [fn: Dog, fn: Dog], but got [fn: Dog, fn: Cat]
+error 1029..1033: Actual arguments do not match signature: <T extends AnyValue>(List<T>, List<T>) -> T expected [List<Dog>, List<Dog>], but got [List<Dog>, List<Cat>]
+error 1061..1079: Actual arguments do not match signature: <T extends AnyValue>(Box<T>, Box<T>) -> T expected [Box<Dog>, Box<Dog>], but got [Box<Dog>, Box<Cat>]
+error 1092..1101: Actual arguments do not match signature: <T extends AnyValue>(List<T>, T) -> T expected [List<Dog>, Dog], but got [List<Dog>, Cat]
+error 1196..1209: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 1222..1239: T is bound to both List<String> and List<Int32>, which can't be told apart once joined; give T explicitly

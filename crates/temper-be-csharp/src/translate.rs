@@ -227,6 +227,10 @@ pub struct Translator<'a> {
     block_writes: HashSet<DeclId>,
     /// The helpers the module's class needs ([`crate::connected::HELPERS`]).
     helpers: BTreeSet<&'static str>,
+    /// Expressions whose value C# never names a type for: a member's
+    /// receiver, read at once, and a dropped value
+    /// ([`Translator::nested_optionals`]).
+    unnamed: HashSet<NodeId>,
 }
 
 /// Where a value given by statements goes ([`Translator::sink`]).
@@ -317,6 +321,7 @@ impl<'a> Translator<'a> {
             hoist: HashSet::new(),
             block_writes: block_writes(p),
             helpers: BTreeSet::new(),
+            unnamed: HashSet::new(),
         }
     }
 
@@ -664,12 +669,11 @@ impl<'a> Translator<'a> {
                 }
             }
             TypeData::Function { .. } => self.delegate(ty)?,
-            TypeData::Nullable(inner)
-                if matches!(self.p.types.get(inner), TypeData::TypeParam { .. }) =>
-            {
+            TypeData::Nullable(inner) if self.is_optional(ty) => {
                 // `T?` of an unconstrained `T` isn't nullable where `T` is
                 // a value type, so it's the runtime's `Optional<T>`, as
-                // Kotlin's.
+                // Kotlin's. A class-bounded `T`'s is plain `T?`
+                // ([`Self::class_bounded`]).
                 let inner = self.ty(inner)?;
                 let optional = match self.class("Optional") {
                     Expr::Name(n) => n,
@@ -732,7 +736,9 @@ impl<'a> Translator<'a> {
 
     /// A generic declaration's type parameters, `<T>`, and their
     /// constraints, `where T : Named` (but `MapKey`, which C#'s maps need
-    /// nothing for).
+    /// nothing for), with `class` first for one bounded by an interface
+    /// only C# classes implement, `where T : class, IShown`, so that its
+    /// `T?` is a nullable reference ([`Self::class_bounded`]).
     fn type_params(&mut self, decl: DeclId) -> R<(String, Vec<String>)> {
         let p = self.p;
         let params = p.decls.type_params(decl).to_vec();
@@ -744,7 +750,13 @@ impl<'a> Translator<'a> {
         for t in params {
             let name = p.name(t).to_string();
             let mut bounds = Vec::new();
-            for &b in p.decls.supers(t) {
+            let supers = p.decls.supers(t);
+            if self.class_bounded(t)
+                && !(supers.iter()).any(|&b| self.reference_bound(b) == Some(DeclKind::Class))
+            {
+                bounds.push("class".to_string());
+            }
+            for &b in supers {
                 let key = nominal_decl(p, b).is_some_and(|d| self.qname(d) == "core.type MapKey");
                 if !key {
                     bounds.push(self.ty(b)?);
@@ -759,13 +771,10 @@ impl<'a> Translator<'a> {
     }
 
     /// A method's or function's name with its type parameters,
-    /// `First<T>`; one with constraints isn't written yet.
-    fn generic_name(&mut self, decl: DeclId, name: String) -> R<String> {
+    /// `First<T>`, and their constraints, `where T : Named`.
+    fn generic_name(&mut self, decl: DeclId, name: String) -> R<(String, Vec<String>)> {
         let (generics, constraints) = self.type_params(decl)?;
-        if !constraints.is_empty() {
-            return not_yet("a generic method with a constraint");
-        }
-        Ok(format!("{name}{generics}"))
+        Ok((format!("{name}{generics}"), constraints))
     }
 
     /// The qname of a type's class or interface, if it has one.
@@ -1385,6 +1394,7 @@ impl<'a> Translator<'a> {
                         result: result.clone(),
                         name: self.member_name(md),
                         params: params.clone(),
+                        constraints: Vec::new(),
                         body: Some(vec![returning(&result, call)]),
                     });
                     let mut helper_params = vec![(self.own_type(decl)?, "@this".to_string())];
@@ -1395,6 +1405,7 @@ impl<'a> Translator<'a> {
                         result,
                         name: helper,
                         params: helper_params,
+                        constraints: Vec::new(),
                         body,
                     });
                 }
@@ -1411,25 +1422,27 @@ impl<'a> Translator<'a> {
                     } else {
                         (self.member_name(md), "")
                     };
-                    let name = self.generic_name(md, name)?;
+                    let (name, constraints) = self.generic_name(md, name)?;
                     out.push(Member::Method {
                         access: self.member_access(md, interface),
                         modifiers,
                         result,
                         name,
                         params,
+                        constraints,
                         body,
                     });
                 }
                 Node::AbstractMethod { decl: md, params } => {
                     let (result, params, _) = self.callable(m, md, params, None)?;
-                    let name = self.generic_name(md, self.member_name(md))?;
+                    let (name, constraints) = self.generic_name(md, self.member_name(md))?;
                     out.push(Member::Method {
                         access: self.member_access(md, interface),
                         modifiers: if self.hides(decl, md) { "new " } else { "" },
                         result,
                         name,
                         params,
+                        constraints,
                         body: None,
                     });
                 }
@@ -1439,7 +1452,7 @@ impl<'a> Translator<'a> {
                     body,
                 } => {
                     let (result, params, body) = self.callable(m, f, params, Some(body))?;
-                    let name = self.generic_name(f, self.member_name(f))?;
+                    let (name, constraints) = self.generic_name(f, self.member_name(f))?;
                     // A private one is `internal`, as the module's class,
                     // whose static constructor sets static fields, may
                     // call it (`last = Named("last")`).
@@ -1453,6 +1466,7 @@ impl<'a> Translator<'a> {
                         result,
                         name,
                         params,
+                        constraints,
                         body,
                     });
                 }
@@ -1529,6 +1543,7 @@ impl<'a> Translator<'a> {
                         result: "void".into(),
                         name,
                         params: vec![this, ps[0].clone()],
+                        constraints: Vec::new(),
                         body: body.take(),
                     });
                     body = Some(vec![Stmt::Expr(call)]);
@@ -1549,6 +1564,7 @@ impl<'a> Translator<'a> {
                         result: result.clone(),
                         name,
                         params: vec![this],
+                        constraints: Vec::new(),
                         body: body.take(),
                     });
                     body = Some(vec![Stmt::Return(Some(call))]);
@@ -1739,6 +1755,7 @@ impl<'a> Translator<'a> {
             result: result.clone(),
             name: self.member_name(chosen),
             params,
+            constraints: Vec::new(),
             body: Some(vec![returning(&result, call)]),
         })
     }
@@ -2491,6 +2508,7 @@ impl<'a> Translator<'a> {
                 object,
                 value,
             } => {
+                self.nested_optionals(field, p.decls.get(field).ty, p.nodes.ty(value))?;
                 let target = self.field(field, object)?;
                 let value = self.expr(value)?;
                 out.push(Stmt::Assign { target, value });
@@ -2563,6 +2581,7 @@ impl<'a> Translator<'a> {
                     return Ok(());
                 }
                 let expr = unconverted(p, expr);
+                self.unnamed.insert(expr);
                 // A setter's call is an assignment of its property.
                 if let Node::CallMethod {
                     method,
@@ -2629,6 +2648,7 @@ impl<'a> Translator<'a> {
     /// its class, which may read it on any instance, else the property
     /// that gives it to others.
     fn field(&mut self, field: DeclId, object: NodeId) -> R<Expr> {
+        self.unnamed.insert(object);
         // A std field the table connects, as `Date.year`'s `Year`.
         if by_connection(self.p, field, crate::connected::connects_std)
             && connected::lookup(&self.qname(field)).is_some()
@@ -2668,6 +2688,7 @@ impl<'a> Translator<'a> {
     /// name.
     fn receiver(&mut self, method: DeclId, receiver: NodeId) -> R<Expr> {
         let owner = self.p.decls.get(method).owner;
+        self.unnamed.insert(receiver);
         let e = self.expr(receiver)?;
         if self.p.is_virtual(method) && self.written_type(receiver) != Some(owner) {
             let of = self.p.nodes.ty(receiver);
@@ -2688,6 +2709,7 @@ impl<'a> Translator<'a> {
         args: &[NodeId],
     ) -> R<Expr> {
         let p = self.p;
+        self.check_call(method, call, args)?;
         let object = self.receiver(method, receiver)?;
         match p.decls.get(method).kind {
             DeclKind::Getter => Ok(object.member(self.member_name(method))),
@@ -2707,11 +2729,17 @@ impl<'a> Translator<'a> {
 
     /// `<A, B>`, a generic call's type arguments, all of them, as C#
     /// can't leave some out, where C# can't infer them from the
-    /// arguments, as when a type parameter appears in no parameter's type
-    /// (`analysis::infers_type_args`); otherwise nothing, leaving them to
-    /// C#.
-    fn spelled_type_args(&mut self, callee: DeclId, type_args: temper_tmpl::TypeArgs) -> R<String> {
-        if temper_tmpl::analysis::infers_type_args(self.p, callee) {
+    /// arguments `args`, as when a type parameter appears in no
+    /// parameter's type, or only where the argument is `null` or left out
+    /// (`analysis::infers_type_args_from`), as for a class-bounded `T?`,
+    /// which is C#'s own `T?`; otherwise nothing, leaving them to C#.
+    fn spelled_type_args(
+        &mut self,
+        callee: DeclId,
+        type_args: temper_tmpl::TypeArgs,
+        args: &[NodeId],
+    ) -> R<String> {
+        if temper_tmpl::analysis::infers_type_args_from(self.p, callee, args) {
             return Ok(String::new());
         }
         let mut texts = Vec::new();
@@ -2735,7 +2763,8 @@ impl<'a> Translator<'a> {
     /// Arguments for parameters of a `T?`, `Optional<T>`, given values of
     /// a type that isn't, wrapped as Kotlin's `WrapAsOptional`:
     /// `Optional<A>.None` for null, else `Optional.Of<A>(x)` (an `A?` or
-    /// an `A`). A value of another type parameter's converts by itself.
+    /// an `A`). A value of another unconstrained type parameter's converts
+    /// by itself.
     fn optional_args(
         &mut self,
         callee: DeclId,
@@ -2756,7 +2785,8 @@ impl<'a> Translator<'a> {
             let inner = p.types.non_null(actual);
             if !self.is_optional(d)
                 || self.is_optional(actual)
-                || matches!(p.types.get(inner), TypeData::TypeParam { .. })
+                || matches!(p.types.get(inner),
+                    TypeData::TypeParam { decl } if !self.class_bounded(decl))
                 || matches!(p.nodes.get(a), Node::Omitted {})
             {
                 continue;
@@ -2785,7 +2815,10 @@ impl<'a> Translator<'a> {
         }
         let actual = p.nodes.ty(call);
         let inner = p.types.non_null(actual);
-        if self.is_optional(actual) || matches!(p.types.get(inner), TypeData::TypeParam { .. }) {
+        if self.is_optional(actual)
+            || matches!(p.types.get(inner),
+                TypeData::TypeParam { decl } if !self.class_bounded(decl))
+        {
             return Ok(e);
         }
         let method = if self.is_value_type(inner) {
@@ -2891,7 +2924,8 @@ impl<'a> Translator<'a> {
                     self.call = id;
                     return self.connected(callee, args);
                 }
-                let spelled = self.spelled_type_args(callee, type_args)?;
+                self.check_call(callee, id, args)?;
+                let spelled = self.spelled_type_args(callee, type_args, args)?;
                 let exprs = self.args(args)?;
                 let exprs = self.optional_args(callee, args, exprs)?;
                 // A generic function can't infer from a method group.
@@ -2931,11 +2965,13 @@ impl<'a> Translator<'a> {
                 ..
             } => {
                 if !by_connection(p, method, crate::connected::connects_std) {
-                    let spelled = self.spelled_type_args(method, type_args)?;
-                    return self.call_method(id, method, &spelled, receiver, p.nodes.list(args));
+                    let args = p.nodes.list(args);
+                    let spelled = self.spelled_type_args(method, type_args, args)?;
+                    return self.call_method(id, method, &spelled, receiver, args);
                 }
                 let mut all = vec![receiver];
                 all.extend_from_slice(p.nodes.list(args));
+                self.unnamed.insert(receiver);
                 self.call = id;
                 self.connected(method, &all)?
             }
@@ -3008,7 +3044,12 @@ impl<'a> Translator<'a> {
                     .method(format!("Bubble<{ty}>"), Vec::new())
             }
             Node::This {} => Expr::name(self.this_name),
-            Node::GetField { field, object } => self.field(field, object)?,
+            Node::GetField { field, object } => {
+                if !self.unnamed.contains(&id) {
+                    self.nested_optionals(field, p.decls.get(field).ty, p.nodes.ty(id))?;
+                }
+                self.field(field, object)?
+            }
             Node::GetStatic { target }
                 if is_external(p, target) && library_of(p, target) == "core" =>
             {
@@ -3039,7 +3080,8 @@ impl<'a> Translator<'a> {
                 self.connected(ctor, p.nodes.list(args))?
             }
             // With its type arguments, as Kotlin's.
-            Node::New { args, .. } => {
+            Node::New { ctor, args, .. } => {
+                self.check_call(ctor, id, p.nodes.list(args))?;
                 let ty = self.ty(p.nodes.ty(id))?;
                 let args = self.args(p.nodes.list(args))?;
                 Expr::name(format!("new {ty}")).call(args)
@@ -3072,6 +3114,18 @@ impl<'a> Translator<'a> {
             // C# converts to an interface by itself.
             Node::Upcast { value } => self.expr(value)?,
             // A failed cast throws, which is how C# bubbles.
+            // A `T?` that's `Optional<T>`: its value, whose read throws
+            // if it has none, cast on to another type, where boxing it
+            // for `CastToNonNull` would cast the box.
+            Node::As { value, .. } if self.is_optional(p.nodes.ty(value)) => {
+                let ty = p.nodes.ty(id);
+                let e = self.expr(value)?.member("Value");
+                if ty == p.types.non_null(p.nodes.ty(value)) {
+                    e
+                } else {
+                    Expr::Cast(self.ty(ty)?, Box::new(e))
+                }
+            }
             // A null cast to a class succeeds, so one from a nullable
             // type checks for null first, as the runtime's
             // `CastToNonNull` does, throwing if it's null.
@@ -3220,15 +3274,128 @@ impl<'a> Translator<'a> {
         })
     }
 
-    /// Whether C# writes a type as a value type, whose nullable type is
-    /// `Nullable<T>`.
     /// Whether a type is a nullable type parameter's, `T?`, which is
-    /// `Optional<T>`.
+    /// `Optional<T>`, `T` not class-bounded ([`Self::class_bounded`]).
     fn is_optional(&self, ty: TypeId) -> bool {
         matches!(self.p.types.get(ty), TypeData::Nullable(inner)
-            if matches!(self.p.types.get(inner), TypeData::TypeParam { .. }))
+            if matches!(self.p.types.get(inner),
+                TypeData::TypeParam { decl } if !self.class_bounded(decl)))
     }
 
+    /// Whether a type parameter's bounds hold only of types C# writes as
+    /// classes, so that its `T?` is C#'s own nullable reference: one of
+    /// them is a class or interface of a library other than core, neither
+    /// connected nor a `@fun` interface (a delegate). Only core declares
+    /// the supertypes of its classes that C# writes as value types (`int`,
+    /// `bool`, `double`), so another library's interface never holds of
+    /// one, where core's may (`MapKey`, `Equatable`). C# structs that
+    /// implement a Temper interface, which Temper never makes, are left
+    /// out (`where T : class, IShown`).
+    fn class_bounded(&self, param: DeclId) -> bool {
+        let p = self.p;
+        p.decls.contains(param)
+            && (p.decls.supers(param).iter()).any(|&b| self.reference_bound(b).is_some())
+    }
+
+    /// A bound's declaration's kind, class or interface, if it holds only
+    /// of C# classes ([`Self::class_bounded`]).
+    fn reference_bound(&self, bound: TypeId) -> Option<DeclKind> {
+        let p = self.p;
+        let decl = nominal_decl(p, bound)?;
+        let d = p.decls.get(decl);
+        let core = is_external(p, decl) && library_of(p, decl) == "core";
+        let host = d.facts.contains(Facts::CONNECTED)
+            || connected::lookup_type(&self.qname(decl)).is_some();
+        let delegate = d.facts.contains(Facts::FUN);
+        let temper = matches!(d.kind, DeclKind::Class | DeclKind::Interface);
+        (temper && !core && !host && !delegate).then_some(d.kind)
+    }
+
+    /// Not yet: a callee's `T?` inside a type argument or a function type,
+    /// `T` unconstrained (`Pair<A, B?>`, `List<T?>`, `fn (T?): R`), where
+    /// it's given a type other than such a `U?` (`declared` as the callee
+    /// has it, `given` as the call does). C# writes the callee's as
+    /// `Optional<T>`, and the caller's as `X?`, and nothing converts
+    /// `KeyValuePair<int, Optional<int>>` to `KeyValuePair<int, int?>`,
+    /// so C#'s compiler would fail (notes/kotlin-differences.md). A
+    /// top-level `T?` is wrapped and unwrapped ([`Self::optional_args`]).
+    fn nested_optionals(&self, callee: DeclId, declared: TypeId, given: TypeId) -> R<()> {
+        let Some(t) = self.nested_optional(declared, given, false) else {
+            return Ok(());
+        };
+        let p = self.p;
+        let t = p.name(t);
+        not_yet(format!(
+            "`{t}?` inside a type argument or function type in `{}`'s type, given \
+             another type there: C# writes an unconstrained `{t}?` as `Optional<{t}>`, \
+             which the caller's type can't match; bound it by a class or interface, \
+             or use a type without a nested `{t}?`",
+            p.name(callee)
+        ))
+    }
+
+    /// The type parameter of a `T?` that's `Optional<T>`, nested in
+    /// `declared`, where `given` has another type in its place
+    /// ([`Self::nested_optionals`]).
+    fn nested_optional(&self, declared: TypeId, given: TypeId, nested: bool) -> Option<DeclId> {
+        let types = &self.p.types;
+        let pairs = |a: temper_tmpl::TypeList, b: temper_tmpl::TypeList| {
+            let (a, b) = (types.list(a), types.list(b));
+            (a.len() == b.len()).then(|| a.iter().copied().zip(b.iter().copied()))
+        };
+        match (types.get(declared), types.get(given)) {
+            (TypeData::Never(d), _) => self.nested_optional(d, given, nested),
+            (_, TypeData::Never(g)) => self.nested_optional(declared, g, nested),
+            (TypeData::Nullable(inner), _) if nested && self.is_optional(declared) => {
+                match types.get(inner) {
+                    TypeData::TypeParam { decl } if !self.is_optional(given) => Some(decl),
+                    _ => None,
+                }
+            }
+            (TypeData::Nullable(d), TypeData::Nullable(g)) => self.nested_optional(d, g, nested),
+            (TypeData::Nominal { decl: a, args: x }, TypeData::Nominal { decl: b, args: y })
+                if a == b =>
+            {
+                pairs(x, y)?.find_map(|(d, g)| self.nested_optional(d, g, true))
+            }
+            (
+                TypeData::Function {
+                    params: dp,
+                    result: dr,
+                    ..
+                },
+                TypeData::Function {
+                    params: gp,
+                    result: gr,
+                    ..
+                },
+            ) => (pairs(dp, gp)?.chain([(dr, gr)]))
+                .find_map(|(d, g)| self.nested_optional(d, g, true)),
+            _ => None,
+        }
+    }
+
+    /// [`Self::nested_optionals`] for a call's arguments, and for its
+    /// result unless C# never names its type.
+    fn check_call(&self, callee: DeclId, call: NodeId, args: &[NodeId]) -> R<()> {
+        let p = self.p;
+        let Some(sig) = p.signature(callee) else {
+            return Ok(());
+        };
+        let skip = sig.params.len().saturating_sub(args.len());
+        for (&d, &a) in sig.params[skip..].iter().zip(args) {
+            if !matches!(p.nodes.get(a), Node::Omitted {}) {
+                self.nested_optionals(callee, d, p.nodes.ty(a))?;
+            }
+        }
+        if !self.unnamed.contains(&call) {
+            self.nested_optionals(callee, sig.result, p.nodes.ty(call))?;
+        }
+        Ok(())
+    }
+
+    /// Whether C# writes a type as a value type, whose nullable type is
+    /// `Nullable<T>`.
     fn is_value_type(&self, ty: TypeId) -> bool {
         match self.p.types.get(ty) {
             TypeData::Scalar(s) => matches!(

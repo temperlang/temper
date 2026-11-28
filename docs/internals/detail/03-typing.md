@@ -78,9 +78,10 @@ is local and cheap: one declaration, one initializer. Typing can grow a
 piece at a time, since what isn't worked out is just unknown.
 
 **Cons:** inference is weaker than a solver's: a type parameter that
-arguments bind two ways is left unknown, where Kotlin finds a common
-supertype; a local's type comes from its initializer alone, never its
-later uses. Forced results aren't memoized, since they may lack what
+arguments bind two ways is their join, or `AnyValue`, an error above a
+`@mayDowncastTo(false)` type unless the type wanted binds it, where
+Kotlin's solver weighs every constraint; a local's type comes from its
+initializer alone, never its later uses. Forced results aren't memoized, since they may lack what
 they didn't wait for, so a forced chain is worked out again on each
 read. Most typing runs after the loop, not in it
 ([settle loop, two rounds](02-settle-loop.md#two-rounds-and-passes-between-and-after)).
@@ -206,27 +207,26 @@ module (`type2/TypeSolver.kt`, `InferBounds.kt`).
 **Pros:** small and predictable; each call is solved once its arguments'
 types are known, so it fits the loop.
 
-**Cons:** a parameter bound two ways is unknown rather than joined; a
-function literal binds a type parameter only if it declares its result
-type; what Kotlin's solver infers from later uses isn't.
+**Cons:** a parameter bound two ways is joined (`AnyValue` where nothing
+closer fits) and the type wanted binds it only where that join would go
+above a `@mayDowncastTo(false)` type, an error otherwise; a function
+literal binds a type parameter only if it declares its result type;
+what Kotlin's solver infers from later uses isn't.
 
 ### Invariant type parameters
 
 **Chosen:** type parameters are invariant: `List<Sub>` is never a
-`List<Super>`. Kotlin's `@out` and `@in` parse as ordinary decorations
-and are ignored. Until it's known what code relies on variance,
-[`is_subtype`](../../../crates/temper-frontend/src/types.rs) reports a
-mismatch only where an argument sets two types apart under any variance,
-so it gives no false errors, and accepts some programs that strict
-invariance would reject.
+`List<Super>`, as
+[`is_subtype`](../../../crates/temper-frontend/src/types.rs) reports.
+Kotlin's `@out` and `@in` are gone, core's too. `Never<Sub>` is a
+`Never<Super>` by `Never`'s own rule: it has no values, and a backend's
+fallback type upcasts.
 
-**Status:** invariance is Temper's plan, since C++ and Rust can't
-express variance well, and the team treats Kotlin's invariant choices
-as deliberate. We decided (2026-10-28) to stay invariant and to
-ignore `@out` and `@in`, and asks Kotlin to drop them. Its checks are
-looser than its rule, though: it accepts programs that only variance
-would allow, which the team means to reject. That gap closes once it's
-known what code relies on `@out` and `@in`.
+**Status:** decided by the team (2026-10-28), since C++ and Rust can't
+express variance well; reported since 2026-11-26, once nothing in core,
+std, the tests, or the showcase libraries was found to rely on it.
+Kotlin Temper should drop variance too. Code that wants a list of any
+subtype takes a `List<T>` for `<T extends Super>`.
 
 ### Target typing, and the object literal as a macro that waits
 
@@ -267,7 +267,7 @@ Kotlin Temper on purpose, each with tests. Where they stand
 | Named `@fun` interfaces are nominal, and a function literal needs a type wanted ([`fun_interfaces`](../../../crates/temper-frontend/src/typing/fun_interfaces.rs)) | This compiler's decision (2026-10-29); proposed to the team |
 | Object literals take their class from the type wanted | Proposed |
 | Narrowing through `&&`, `\|\|`, `!`, `while`, and after an early exit | Proposed; accepts more than Kotlin |
-| Invariance, with `@out` and `@in` ignored | Temper's plan; this compiler's checks are looser for now |
+| Invariance, without `@out` and `@in` | Decided by the Temper team, 2026-10-28; reported since 2026-11-26 |
 
 The ones that reject what Kotlin accepts (nominal `@fun` interfaces,
 fields first) mean a library can pass one compiler and fail the other
@@ -448,9 +448,9 @@ it testable on its own.
 - **`Never` without its `T`:** a backend can't get the fallback type, and
   a `Never<A>` used as an unrelated `B` isn't reported. Planned before
   more of code generation relies on it.
-- **Weaker inference than Kotlin's solver** in places: type parameters
-  bound two ways, results of function literals that don't declare them,
-  generators and `async` blocks, and list literals without a common
+- **Weaker inference than Kotlin's solver** in places: results of
+  function literals that don't declare them, generators and `async`
+  blocks, and list literals without a common
   type (notes/typing.md, "Every expression typed", "Left").
 - **Flow facts are narrower than their design:** no `var` narrowing,
   ranges, or definite assignment yet.

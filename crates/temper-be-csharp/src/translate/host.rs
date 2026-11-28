@@ -71,12 +71,13 @@ impl Translator<'_> {
         };
         let call = Expr::name(class).method(pascal_case(p.name(decl)), args);
         stmts.push(returning(&result, call));
+        let (name, constraints) = self.generic_name(decl, self.name(decl))?;
         Ok(tree::Method {
             public: self.exported(decl),
             result,
-            name: self.generic_name(decl, self.name(decl))?,
+            name,
             params: ps,
-            constraints: Vec::new(),
+            constraints,
             body: stmts,
         })
     }

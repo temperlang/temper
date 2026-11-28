@@ -212,11 +212,7 @@ pub fn core_member_declarations(type_name: &str, member: &str) -> Vec<usize> {
     let mut out = Vec::new();
     let mut name = Some(type_name);
     while let Some(ty) = name {
-        let class = match READ_TYPES.contains(&ty) {
-            true => Some(core_class(ty)),
-            false => other_class(ty),
-        };
-        let Some(class) = class else {
+        let Some(class) = declared_class(ty) else {
             break;
         };
         out.extend(
@@ -229,8 +225,24 @@ pub fn core_member_declarations(type_name: &str, member: &str) -> Vec<usize> {
     out
 }
 
-/// A type core declares that typing doesn't read, as `Console`, read the
-/// first time an editor wants one.
+/// How many type parameters core declares a builtin type with, as 2 for
+/// `Map<K extends MapKey<K>, V>`, if core declares it.
+pub(super) fn core_type_arity(type_name: &str) -> Option<usize> {
+    declared_class(type_name).map(|class| class.type_params)
+}
+
+/// A type's declaration in core, if core declares it, read the first time
+/// it's wanted.
+fn declared_class(type_name: &str) -> Option<&'static CoreClass> {
+    match READ_TYPES.contains(&type_name) {
+        true => Some(core_class(type_name)),
+        false => other_class(type_name),
+    }
+}
+
+/// A type core declares that typing doesn't read, as `Console` for an
+/// editor or `MapKey` for its type parameters, read the first time it's
+/// wanted.
 fn other_class(name: &str) -> Option<&'static CoreClass> {
     static OTHERS: std::sync::Mutex<Vec<(String, &'static CoreClass)>> =
         std::sync::Mutex::new(Vec::new());
@@ -425,7 +437,7 @@ impl<'a> Reader<'a> {
         }
     }
 
-    /// A type parameter's name: `T`, `@out T`, or `K extends MapKey<K>`
+    /// A type parameter's name: `T`, a decorated `T`, or `K extends MapKey<K>`
     /// (`(Block \typeArg K \super …)`).
     fn type_param_name(&self, node: NodeId) -> Option<&'a str> {
         let tree = self.ast.tree();

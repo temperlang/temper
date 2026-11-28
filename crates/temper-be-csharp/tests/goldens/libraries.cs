@@ -390,7 +390,7 @@ public static class LibrariesGlobal
     }
 
     public static bool SameHeld<T>(Held<T>? a, Held<T>? b)
-        where T : IShown
+        where T : class, IShown
     {
         Held<T>? left = a;
         Held<T>? right = b;

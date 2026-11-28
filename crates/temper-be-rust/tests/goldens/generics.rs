@@ -48,8 +48,44 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 tagged::<Scene, i32>(4),
                 tagged::<Scene, Arc<String>>(Arc::new("t".to_string())),
                 count_of::<temper_core::AnyValue>(3),
-                relayed::<Scene, i32>(5)
+                relayed::<Stage, i32>(5)
             );
+            let half: (i32, temper_core::List<temper_core::AnyValue>) =
+                half_pair::<i32, temper_core::AnyValue>(8);
+            let half_too: (Arc<String>, temper_core::List<temper_core::AnyValue>) =
+                half_pair::<Arc<String>, temper_core::AnyValue>(Arc::new("h".to_string()));
+            println!(
+                "{} {} {}",
+                half.0,
+                temper_core::ListedTrait::len(&half.1),
+                half_too.0
+            );
+            let opt_none = opt::<temper_core::AnyValue>(None);
+            let opt_some = opt(Some(6));
+            println!(
+                "{} {} {}",
+                opt_none.is_none(),
+                if opt_some.is_none() {
+                    0i32
+                } else {
+                    opt_some.unwrap()
+                },
+                {
+                    let subject3 = opt::<Arc<String>>(None);
+                    subject3
+                        .clone()
+                        .unwrap_or_else(|| Arc::new("-".to_string()))
+                }
+            );
+            let one = scaled(2, Arc::new(move |y: i32| y.wrapping_add(1)), None);
+            let two = scaled(2, Arc::new(move |y: i32| y.wrapping_mul(2)), Some(10));
+            let three = joined(
+                3,
+                Arc::new("s".to_string()),
+                Arc::new(move |a: i32, b: Arc<String>| Arc::new(format!("{a}{b}"))),
+            );
+            let four = r#box.applied(Arc::new(move |s: Arc<String>| Arc::new(format!("{s}!"))));
+            println!("{one} {two} {three} {four}");
             let builder: temper_core::ListBuilder<Arc<String>> = temper_core::listed::new_builder();
             temper_core::listed::add(&builder, Arc::new("x".to_string()), None);
             temper_core::listed::add(&builder, Arc::new("y".to_string()), None);
@@ -85,24 +121,24 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!(
                 "{} {} {}",
                 {
-                    let subject3 =
+                    let subject4 =
                         temper_core::MappedTrait::get_or(&mb, Arc::new("q".to_string()), Some(0));
-                    subject3.unwrap_or(-2)
+                    subject4.unwrap_or(-2)
                 },
                 {
-                    let subject4 =
+                    let subject5 =
                         temper_core::MappedTrait::get_or(&mb, Arc::new("n".to_string()), Some(0));
-                    subject4.unwrap_or(-2)
+                    subject5.unwrap_or(-2)
                 },
                 temper_core::MappedTrait::has(&mb, Arc::new("n".to_string()))
             );
             println!("{}", {
-                let subject5 = {
-                    let subject6 = temper_core::MapBuilder::remove(&mb, Arc::new("q".to_string()))
+                let subject6 = {
+                    let subject7 = temper_core::MapBuilder::remove(&mb, Arc::new("q".to_string()))
                         .unwrap_or(Some(0));
-                    subject6.map(|subject6| Arc::new(subject6.to_string()))
+                    subject7.map(|subject7| Arc::new(subject7.to_string()))
                 };
-                subject5
+                subject6
                     .clone()
                     .unwrap_or_else(|| Arc::new("null".to_string()))
             });
@@ -187,6 +223,13 @@ impl<T: Clone + Send + Sync + 'static> Box<T> {
 
     pub fn pair_with(&self, other: i32) -> (T, i32) {
         (self.0.value.clone(), other)
+    }
+
+    pub fn applied<TOut: Clone + Send + Sync + 'static>(
+        &self,
+        f: Arc<dyn Fn(T) -> TOut + Send + Sync>,
+    ) -> TOut {
+        f(self.0.value.clone())
     }
 
     pub fn value(&self) -> T {
@@ -276,7 +319,7 @@ impl<T: Clone + Send + Sync + 'static + Into<Named>> Shelf<T> {
     }
 
     #[allow(clippy::extra_unused_type_parameters)]
-    pub fn tally<TName: Clone + Send + Sync + 'static>(&self, extra: i32) -> i32 {
+    pub fn tally<TName: Clone + Send + Sync + 'static + Into<Named>>(&self, extra: i32) -> i32 {
         temper_core::ListedTrait::len(&self.0.items).wrapping_add(extra)
     }
 
@@ -337,7 +380,10 @@ impl SceneTrait for Stage {
 temper_core::impl_any_value_trait!(Stage, [Scene]);
 
 #[allow(clippy::extra_unused_type_parameters)]
-pub(crate) fn tagged<S: Clone + Send + Sync + 'static, T: Clone + Send + Sync + 'static>(
+pub(crate) fn tagged<
+    S: SceneTrait + Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+>(
     x: T,
 ) -> T {
     x.clone()
@@ -357,6 +403,33 @@ pub(crate) fn relayed<
     x: T,
 ) -> T {
     tagged::<S, T>(x.clone())
+}
+
+pub(crate) fn half_pair<A: Clone + Send + Sync + 'static, B: Clone + Send + Sync + 'static>(
+    a: A,
+) -> (A, temper_core::List<B>) {
+    (a.clone(), Arc::new(vec![]))
+}
+
+pub(crate) fn opt<T: Clone + Send + Sync + 'static>(x: Option<T>) -> Option<T> {
+    x.clone()
+}
+
+pub(crate) fn scaled<T: Clone + Send + Sync + 'static>(
+    x: T,
+    f: Arc<dyn Fn(T) -> i32 + Send + Sync>,
+    scale: Option<i32>,
+) -> i32 {
+    let scale = scale.unwrap_or(1);
+    f(x.clone()).wrapping_mul(scale)
+}
+
+pub(crate) fn joined<A: Clone + Send + Sync + 'static, B: Clone + Send + Sync + 'static>(
+    a: A,
+    b: B,
+    f: Arc<dyn Fn(A, B) -> Arc<String> + Send + Sync>,
+) -> Arc<String> {
+    f(a.clone(), b.clone())
 }
 
 pub(crate) fn none_in(length: i32) -> bool {

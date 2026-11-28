@@ -167,6 +167,28 @@ const FLOAT_FORMAT: &str = "# Float format
     show([1.7976931348623157e308, -0.0, NaN, 1e999, -1e999]);
 ";
 
+/// A type parameter's `B?` in a generic call's result, `B` a class's
+/// `shared_ptr` (its bound, `AnyValue` or `Named`, or given) or a value:
+/// the runtime's `core::Nullable<B>`, the type the caller's local names
+/// (`Pair<int32_t, std::shared_ptr<Named>>`, not a `NullableParam` of
+/// it); and `x as T` from a null `T?` bubbles for a class too.
+const NULLABLE_TYPE_ARGS: &str = "# Nullable type arguments
+
+    class Named(public name: String) {}
+    let halfPair<A, B>(a: A): Pair<A, B?> { new Pair<A, B?>(a, null) }
+    let halfNamed<A, B extends Named>(a: A): Pair<A, B?> { new Pair<A, B?>(a, null) }
+    let known<T>(x: T?): T throws Bubble { x as T }
+    let half = halfPair<Int>(8);
+    let halfThree = halfNamed(3);
+    let halfMade = halfPair<Int, Named>(9);
+    let halfInt = halfPair<Int, Int>(1);
+    console.log(\"${half.key} ${half.value == null} ${halfThree.key} ${halfMade.value == null} ${halfInt.value ?? -1}\");
+    let named: Named? = null;
+    let fallback = new Named(\"bubbled\");
+    let got = known(named) orelse fallback;
+    console.log(\"${known(new Named(\"n\")).name} ${got.name} ${known<Int>(2)}\");
+";
+
 /// Objects that a call frees while it runs, which C++ must keep alive:
 /// a method's object that only a field held, which the method replaces;
 /// arguments read from a field the callee replaces, which Kotlin's C++
@@ -402,6 +424,12 @@ fn cases() -> Vec<Case> {
         "bit-vector.temper.md",
         BIT_VECTOR,
         vec!["false true false false".into()],
+    ));
+    cases.push(Case::inline(
+        "nullable-type-args",
+        "nullable-type-args.temper.md",
+        NULLABLE_TYPE_ARGS,
+        vec!["8 true 3 true -1".into(), "n bubbled 2".into()],
     ));
     cases.push(Case::inline(
         "lifetimes",

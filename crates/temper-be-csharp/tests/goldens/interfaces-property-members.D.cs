@@ -1,7 +1,7 @@
 namespace PropertyMembers;
 
 internal class D<T>
-    where T : II
+    where T : class, II
 {
     private readonly T thing;
 
